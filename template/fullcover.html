@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Full Covers (Resize Only)</h1>
+<p class="muted">Upload one or more already-complete cover images — no combining needed. Each will be forced to 2.2cm x 1.6cm.</p>
+
+<div class="card">
+  <form method="post" enctype="multipart/form-data">
+    <label>Cover image(s)</label>
+    <input type="file" name="covers" accept="image/*" multiple required>
+
+    <button type="submit" class="btn-primary">Resize</button>
+  </form>
+</div>
+
+<div class="section-header">
+  <div>
+    <strong>{{ images|length }}</strong> cover(s) in this section
+    <span class="muted">(Folder: <code>{{ out_folder }}</code>)</span>
+  </div>
+  {% if images %}
+  <form method="post" action="{{ url_for('clear_section', folder='fullcover_output') }}" onsubmit="return confirm('Delete all {{ images|length }} full covers?');" style="margin:0;">
+    <button type="submit" class="btn-clear">Clear Full Covers</button>
+  </form>
+  {% endif %}
+</div>
+
+{% if images %}
+<div class="thumb-grid">
+  {% for img in images %}
+  <div class="thumb-card">
+    <img class="thumb-img" src="{{ url_for('thumbnail', folder='fullcover_output', filename=img) }}" alt="{{ img }}" loading="lazy">
+    <div class="thumb-title">{{ img }}</div>
+    <form method="post" action="{{ url_for('delete_file', folder='fullcover_output', filename=img) }}" onsubmit="return confirm('Delete {{ img }}?');" style="margin:0;">
+      <button type="submit" class="btn-delete">🗑️ Delete</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="muted" style="margin-top: 20px; font-style: italic;">No full covers added yet.</p>
+{% endif %}
+
+{% endblock %}

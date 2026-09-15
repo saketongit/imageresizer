@@ -1,0 +1,52 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Three-Part Covers</h1>
+<p class="muted">Upload one back image, one spine image, and one front image per book, then click "Add Book". The page stays open so you can add the next book right away.</p>
+
+<div class="card">
+  <form method="post" enctype="multipart/form-data">
+    <label>Book / Output Name <span class="muted" style="font-weight: normal;">(optional &mdash; auto-detected from front image if blank)</span></label>
+    <input type="text" name="book_name" placeholder="e.g. Harry Potter 1, Hobbit..." style="width: 100%; box-sizing: border-box; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem;">
+
+    <label>Back side</label>
+    <input type="file" name="back" accept="image/*" required>
+
+    <label>Spine</label>
+    <input type="file" name="spine" accept="image/*" required>
+
+    <label>Front side</label>
+    <input type="file" name="front" accept="image/*" required>
+
+    <button type="submit" class="btn-primary">Add Book</button>
+  </form>
+</div>
+
+<div class="section-header">
+  <div>
+    <strong>{{ images|length }}</strong> book(s) in this section
+    <span class="muted">(Folder: <code>{{ out_folder }}</code>)</span>
+  </div>
+  {% if images %}
+  <form method="post" action="{{ url_for('clear_section', folder='3part_output') }}" onsubmit="return confirm('Delete all {{ images|length }} 3-part covers?');" style="margin:0;">
+    <button type="submit" class="btn-clear">Clear 3-Part Covers</button>
+  </form>
+  {% endif %}
+</div>
+
+{% if images %}
+<div class="thumb-grid">
+  {% for img in images %}
+  <div class="thumb-card">
+    <img class="thumb-img" src="{{ url_for('thumbnail', folder='3part_output', filename=img) }}" alt="{{ img }}" loading="lazy">
+    <div class="thumb-title">{{ img }}</div>
+    <form method="post" action="{{ url_for('delete_file', folder='3part_output', filename=img) }}" onsubmit="return confirm('Delete {{ img }}?');" style="margin:0;">
+      <button type="submit" class="btn-delete">🗑️ Delete</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="muted" style="margin-top: 20px; font-style: italic;">No 3-part covers added yet.</p>
+{% endif %}
+
+{% endblock %}

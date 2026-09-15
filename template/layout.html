@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Book Cover Pipeline</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 30px auto; padding: 0 16px; color: #1e293b; background: #f8fafc; }
+    h1 { font-size: 1.5rem; margin-top: 0; color: #0f172a; }
+    h2, h3 { color: #1e293b; }
+    .nav-container { display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; margin-bottom: 20px; }
+    nav a { margin-right: 16px; text-decoration: none; color: #2563eb; font-weight: 500; font-size: 0.95rem; }
+    nav a:hover { text-decoration: underline; }
+    .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 16px 0; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+    .flash { padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; font-size: 0.95rem; }
+    .flash.success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .flash.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    label { display: block; margin: 12px 0 4px; font-weight: 600; font-size: 0.9rem; }
+    input[type=file] { display: block; margin-top: 4px; }
+    button.btn-primary { margin-top: 16px; padding: 8px 18px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95rem; font-weight: 500; }
+    button.btn-primary:hover { background: #1d4ed8; }
+    button:disabled { background: #94a3b8 !important; cursor: not-allowed !important; }
+    .btn-clear { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; cursor: pointer; font-weight: 500; }
+    .btn-clear:hover { background: #fee2e2; }
+    .muted { color: #64748b; font-size: 0.9rem; }
+    code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; color: #0f172a; }
+    
+    /* Thumbnail Previews & Gallery */
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0; }
+    .thumb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 12px; margin-top: 14px; }
+    .thumb-card { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
+    .thumb-img { width: 100%; height: 75px; object-fit: contain; background: #f1f5f9; border-radius: 4px; border: 1px solid #e2e8f0; }
+    .thumb-title { font-size: 0.75rem; font-weight: 600; margin: 6px 0 6px; color: #334155; word-break: break-all; }
+    .btn-delete { background: #ef4444; color: white; padding: 3px 8px; font-size: 0.75rem; border: none; border-radius: 4px; cursor: pointer; margin-top: 0; }
+    .btn-delete:hover { background: #dc2626; }
+    .badge { display: inline-block; padding: 2px 8px; font-size: 0.75rem; font-weight: 600; border-radius: 9999px; background: #e2e8f0; color: #334155; }
+    .badge-primary { background: #dbeafe; color: #1e40af; }
+  </style>
+</head>
+<body>
+  <div class="nav-container">
+    <nav>
+      <a href="{{ url_for('index') }}">Home</a>
+      <a href="{{ url_for('twopart') }}">2-Part</a>
+      <a href="{{ url_for('threepart') }}">3-Part</a>
+      <a href="{{ url_for('fullcover') }}">Full Cover</a>
+      <a href="{{ url_for('pdf') }}">Final PDF</a>
+    </nav>
+    {% if total_queued and total_queued > 0 %}
+    <form method="post" action="{{ url_for('clear_all') }}" onsubmit="return confirm('Are you sure you want to delete ALL {{ total_queued }} queued covers across all sections?');" style="margin:0;">
+      <button type="submit" class="btn-clear" style="margin:0;">🗑️ Clear Batch ({{ total_queued }})</button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash {{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</body>
+</html>

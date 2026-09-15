@@ -1,0 +1,90 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Book Cover Pipeline</h1>
+<p class="muted">Process your covers step by step. Each step resizes/combines immediately on submit. Generating the PDF archives all images into a new timestamped batch folder and resets the workspace for your next run.</p>
+
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <h3 style="margin: 0 0 4px 0;">1. Two-part covers (back + front)</h3>
+      <p style="margin: 0;" class="muted">{{ counts.twopart }} book(s) combined so far.</p>
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      {% if counts.twopart > 0 %}
+      <form method="post" action="{{ url_for('clear_section', folder='2part_output') }}" onsubmit="return confirm('Clear all 2-part covers?');" style="margin:0;">
+        <button type="submit" class="btn-clear" style="padding: 4px 8px; font-size: 0.8rem;">Clear</button>
+      </form>
+      {% endif %}
+      <a href="{{ url_for('twopart') }}" style="text-decoration: none; font-weight: 600; color: #2563eb;">Open →</a>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <h3 style="margin: 0 0 4px 0;">2. Three-part covers (back + spine + front)</h3>
+      <p style="margin: 0;" class="muted">{{ counts.threepart }} book(s) combined so far.</p>
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      {% if counts.threepart > 0 %}
+      <form method="post" action="{{ url_for('clear_section', folder='3part_output') }}" onsubmit="return confirm('Clear all 3-part covers?');" style="margin:0;">
+        <button type="submit" class="btn-clear" style="padding: 4px 8px; font-size: 0.8rem;">Clear</button>
+      </form>
+      {% endif %}
+      <a href="{{ url_for('threepart') }}" style="text-decoration: none; font-weight: 600; color: #2563eb;">Open →</a>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <h3 style="margin: 0 0 4px 0;">3. Full covers (resize only)</h3>
+      <p style="margin: 0;" class="muted">{{ counts.fullcover }} cover(s) resized so far.</p>
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      {% if counts.fullcover > 0 %}
+      <form method="post" action="{{ url_for('clear_section', folder='fullcover_output') }}" onsubmit="return confirm('Clear all full covers?');" style="margin:0;">
+        <button type="submit" class="btn-clear" style="padding: 4px 8px; font-size: 0.8rem;">Clear</button>
+      </form>
+      {% endif %}
+      <a href="{{ url_for('fullcover') }}" style="text-decoration: none; font-weight: 600; color: #2563eb;">Open →</a>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <h3 style="margin: 0 0 4px 0;">4. Generate final print PDF</h3>
+      <p style="margin: 0;" class="muted">
+        {% if icc_ready %}
+          <span style="color: #059669;">✓ ICC profiles found</span> — ready to generate (<strong>{{ total_queued }}</strong> covers in queue).
+        {% else %}
+          <span style="color: #dc2626;">⚠ ICC profiles missing</span> — add <code>sRGB.icc</code> and <code>FOGRA39L_coated.icc</code> to <code>{{ icc_folder }}</code> first.
+        {% endif %}
+      </p>
+    </div>
+    <a href="{{ url_for('pdf') }}" style="text-decoration: none; font-weight: 600; color: #2563eb;">Open →</a>
+  </div>
+</div>
+
+{% if recent_batches %}
+<div class="section-header" style="margin-top: 36px;">
+  <strong>Recent Completed Batches</strong>
+</div>
+<div style="margin-top: 10px;">
+  {% for b in recent_batches %}
+  <div class="card" style="padding: 12px 16px; margin: 8px 0;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <strong>{{ b.name }}</strong> &bull; <span class="muted">{{ b.image_count }} cover image(s) + PDF</span>
+      </div>
+      <code style="font-size: 0.75rem;">{{ b.path }}</code>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Generate Final Print PDF</h1>
+<p class="muted">Review all covers ready to be placed on the 12" x 18" sheet. Covers are automatically gathered from 2-part, 3-part, and full-cover steps.</p>
+
+<div class="flash success" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe;">
+  💡 <strong>Automatic Batch Archiving</strong>: When you generate the PDF, all images and the compiled PDF are saved into a new timestamped folder under <code>{{ completed_batches_dir }}</code>, and staging folders are automatically reset for your next run.
+</div>
+
+{% if not icc_ready %}
+<div class="flash error">
+  ICC profiles missing. Place <code>sRGB.icc</code> and <code>FOGRA39L_coated.icc</code> inside <code>{{ icc_folder }}</code>, then reload this page.
+</div>
+{% endif %}
+
+<div class="card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+  <div>
+    <h3 style="margin: 0 0 4px 0;">Total Queued Covers: <strong>{{ total_queued }}</strong></h3>
+    <span class="muted">
+      2-Part: {{ twopart_imgs|length }} &bull; 
+      3-Part: {{ threepart_imgs|length }} &bull; 
+      Full Cover: {{ fullcover_imgs|length }}
+    </span>
+  </div>
+  <div style="display: flex; gap: 10px; align-items: center;">
+    {% if total_queued > 0 %}
+    <form method="post" action="{{ url_for('clear_all') }}" onsubmit="return confirm('Clear ALL {{ total_queued }} queued covers?');" style="margin:0;">
+      <button type="submit" class="btn-clear">🗑️ Clear Queue</button>
+    </form>
+    {% endif %}
+    <form method="post" style="margin: 0;">
+      <button type="submit" class="btn-primary" style="margin:0;" {% if not icc_ready or total_queued == 0 %}disabled{% endif %}>
+        📄 Generate &amp; Download PDF
+      </button>
+    </form>
+  </div>
+</div>
+
+{% if total_queued > 0 %}
+  {% if twopart_imgs %}
+  <div class="section-header">
+    <strong>Two-Part Covers ({{ twopart_imgs|length }})</strong>
+  </div>
+  <div class="thumb-grid">
+    {% for img in twopart_imgs %}
+    <div class="thumb-card">
+      <img class="thumb-img" src="{{ url_for('thumbnail', folder='2part_output', filename=img) }}" alt="{{ img }}" loading="lazy">
+      <div class="thumb-title">{{ img }}</div>
+      <form method="post" action="{{ url_for('delete_file', folder='2part_output', filename=img) }}" onsubmit="return confirm('Delete {{ img }}?');" style="margin:0;">
+        <button type="submit" class="btn-delete">🗑️ Delete</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if threepart_imgs %}
+  <div class="section-header">
+    <strong>Three-Part Covers ({{ threepart_imgs|length }})</strong>
+  </div>
+  <div class="thumb-grid">
+    {% for img in threepart_imgs %}
+    <div class="thumb-card">
+      <img class="thumb-img" src="{{ url_for('thumbnail', folder='3part_output', filename=img) }}" alt="{{ img }}" loading="lazy">
+      <div class="thumb-title">{{ img }}</div>
+      <form method="post" action="{{ url_for('delete_file', folder='3part_output', filename=img) }}" onsubmit="return confirm('Delete {{ img }}?');" style="margin:0;">
+        <button type="submit" class="btn-delete">🗑️ Delete</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if fullcover_imgs %}
+  <div class="section-header">
+    <strong>Full Covers ({{ fullcover_imgs|length }})</strong>
+  </div>
+  <div class="thumb-grid">
+    {% for img in fullcover_imgs %}
+    <div class="thumb-card">
+      <img class="thumb-img" src="{{ url_for('thumbnail', folder='fullcover_output', filename=img) }}" alt="{{ img }}" loading="lazy">
+      <div class="thumb-title">{{ img }}</div>
+      <form method="post" action="{{ url_for('delete_file', folder='fullcover_output', filename=img) }}" onsubmit="return confirm('Delete {{ img }}?');" style="margin:0;">
+        <button type="submit" class="btn-delete">🗑️ Delete</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% else %}
+<div class="card" style="text-align: center; padding: 25px;">
+  <p class="muted" style="margin: 0;">No covers currently staged. Add covers in the 2-Part, 3-Part, or Full Cover tabs.</p>
+</div>
+{% endif %}
+
+{% if recent_batches %}
+<div class="section-header" style="margin-top: 36px;">
+  <strong>Recent Completed Batches</strong>
+</div>
+<div style="margin-top: 10px;">
+  {% for b in recent_batches %}
+  <div class="card" style="padding: 12px 16px; margin: 8px 0;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <strong>{{ b.name }}</strong> &bull; <span class="muted">{{ b.image_count }} cover image(s) + PDF</span>
+      </div>
+      <code style="font-size: 0.75rem;">{{ b.path }}</code>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}
