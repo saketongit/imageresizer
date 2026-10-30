@@ -449,7 +449,7 @@ def build_pdf(image_paths, output_pdf_path: Path) -> Path:
     IMG_W = FULL_WIDTH_CM * cm
     IMG_H = HEIGHT_CM * cm
     GAP = 0.2 * cm
-    BG_CMYK = (0, 0, 22, 20)
+    BG_CMYK = (0, 0, 0.22, 0.20)
 
     srgb_profile = ImageCms.getOpenProfile(str(SRGB_PROFILE_PATH))
     cmyk_profile = ImageCms.getOpenProfile(str(CMYK_PROFILE_PATH))
