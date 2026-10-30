@@ -31,9 +31,13 @@ from flask import (
     send_from_directory,
 )
 from PIL import Image, ImageFilter, ImageCms
+from reportlab import rl_config
 from reportlab.lib.units import cm, inch
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
+
+# Write binary JPEG streams directly (faster & ~20% smaller PDF)
+rl_config.useA85 = 0
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
@@ -479,7 +483,14 @@ def build_pdf(image_paths, output_pdf_path: Path) -> Path:
     total_unique = len(readers)
     total_pages = max(1, -(-total_unique // slots_per_page))
 
+
     c = canvas.Canvas(str(output_pdf_path), pagesize=(PAGE_WIDTH, PAGE_HEIGHT))
+
+    # Register each unique cover once as a reusable Form XObject
+    for i, reader in enumerate(readers):
+        c.beginForm(f"cover_{i}", 0, 0, IMG_W, IMG_H)
+        c.drawImage(reader, 0, 0, width=IMG_W, height=IMG_H, preserveAspectRatio=False)
+        c.endForm()
 
     idx = 0
     for _ in range(total_pages):
@@ -487,11 +498,14 @@ def build_pdf(image_paths, output_pdf_path: Path) -> Path:
         c.rect(0, 0, PAGE_WIDTH, PAGE_HEIGHT, fill=1, stroke=0)
         for row in range(rows):
             for col in range(cols):
-                reader = readers[idx % total_unique]
+                form_name = f"cover_{idx % total_unique}"
                 idx += 1
                 x = MARGIN + col * (IMG_W + GAP)
                 y = PAGE_HEIGHT - MARGIN - IMG_H - row * (IMG_H + GAP)
-                c.drawImage(reader, x, y, width=IMG_W, height=IMG_H, preserveAspectRatio=False)
+                c.saveState()
+                c.translate(x, y)
+                c.doForm(form_name)
+                c.restoreState()
         c.showPage()
 
     c.save()
