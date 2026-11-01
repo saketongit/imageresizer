@@ -19,6 +19,7 @@ import re
 import shutil
 from datetime import datetime
 from pathlib import Path
+import json
 
 from flask import (
     Flask,
@@ -72,6 +73,14 @@ DPI_FULLCOVER = 1016   # matches resize_book.py
 SHARPEN_RADIUS = 0.6
 SHARPEN_PERCENT = 60
 SHARPEN_THRESHOLD = 2
+# ---- Shared PDF sheet constants (used by build_pdf AND the custom layout) ----
+PAGE_WIDTH = 12 * inch
+PAGE_HEIGHT = 18 * inch
+MARGIN = 0.9 * cm
+IMG_W = FULL_WIDTH_CM * cm
+IMG_H = HEIGHT_CM * cm
+GAP = 0.2 * cm
+BG_CMYK = (0, 0, 0.22, 0.20)
 
 
 def cm_to_px(value_cm: float, dpi: int) -> int:
@@ -447,14 +456,7 @@ def pdf():
 
 
 def build_pdf(image_paths, output_pdf_path: Path) -> Path:
-    PAGE_WIDTH = 12 * inch
-    PAGE_HEIGHT = 18 * inch
-    MARGIN = 1 * cm
-    IMG_W = FULL_WIDTH_CM * cm
-    IMG_H = HEIGHT_CM * cm
-    GAP = 0.2 * cm
-    BG_CMYK = (0, 0, 0.22, 0.20)
-
+  
     srgb_profile = ImageCms.getOpenProfile(str(SRGB_PROFILE_PATH))
     cmyk_profile = ImageCms.getOpenProfile(str(CMYK_PROFILE_PATH))
 
@@ -480,6 +482,10 @@ def build_pdf(image_paths, output_pdf_path: Path) -> Path:
     cols = int((usable_w + GAP) // (IMG_W + GAP))
     rows = int((usable_h + GAP) // (IMG_H + GAP))
     slots_per_page = cols * rows
+    grid_w = cols * IMG_W + (cols - 1) * GAP
+    x_offset = (PAGE_WIDTH - grid_w) / 2
+    grid_h = rows * IMG_H + (rows - 1) * GAP
+    y_offset = (PAGE_HEIGHT - grid_h) / 2
     total_unique = len(readers)
     total_pages = max(1, -(-total_unique // slots_per_page))
 
@@ -500,8 +506,8 @@ def build_pdf(image_paths, output_pdf_path: Path) -> Path:
             for col in range(cols):
                 form_name = f"cover_{idx % total_unique}"
                 idx += 1
-                x = MARGIN + col * (IMG_W + GAP)
-                y = PAGE_HEIGHT - MARGIN - IMG_H - row * (IMG_H + GAP)
+                x = x_offset + col * (IMG_W + GAP)
+                y = PAGE_HEIGHT - y_offset - IMG_H - row * (IMG_H + GAP)
                 c.saveState()
                 c.translate(x, y)
                 c.doForm(form_name)
@@ -510,6 +516,315 @@ def build_pdf(image_paths, output_pdf_path: Path) -> Path:
 
     c.save()
     return output_pdf_path
+
+# ============================================================ CUSTOM LAYOUT ====
+STAGING_FOLDERS = {
+    "2part_output": TWOPART_OUT,
+    "3part_output": THREEPART_OUT,
+    "fullcover_output": FULLCOVER_OUT,
+}
+FOLDER_LABELS = {
+    "2part_output": "2-part",
+    "3part_output": "3-part",
+    "fullcover_output": "Full cover",
+}
+CUSTOM_LAYOUT_PATH = DATA_DIR / "custom_layout.json"
+MAP_WIDTH_PX = 360
+
+
+def grid_dimensions() -> tuple[int, int]:
+    """(columns, rows) that fit on the sheet. Same maths as build_pdf."""
+    usable_w = PAGE_WIDTH - 2 * MARGIN
+    usable_h = PAGE_HEIGHT - 2 * MARGIN
+    cols = int((usable_w + GAP) // (IMG_W + GAP))
+    rows = int((usable_h + GAP) // (IMG_H + GAP))
+    return cols, rows
+
+
+def default_custom_layout() -> dict:
+    return {"mode": "rows", "placements": []}
+
+
+def load_custom_layout() -> dict:
+    try:
+        data = json.loads(CUSTOM_LAYOUT_PATH.read_text(encoding="utf-8"))
+        if data.get("mode") in ("rows", "columns") and isinstance(data.get("placements"), list):
+            return data
+    except (OSError, ValueError):
+        pass
+    return default_custom_layout()
+
+
+def save_custom_layout(layout: dict) -> None:
+    CUSTOM_LAYOUT_PATH.write_text(json.dumps(layout, indent=2), encoding="utf-8")
+
+
+def prune_custom_layout(layout: dict) -> int:
+    """Drop placements whose cover file no longer exists. Returns how many were removed."""
+    kept = [
+        p for p in layout["placements"]
+        if p.get("folder") in STAGING_FOLDERS
+        and (STAGING_FOLDERS[p["folder"]] / p.get("file", "")).is_file()
+    ]
+    removed = len(layout["placements"]) - len(kept)
+    if removed:
+        layout["placements"] = kept
+        save_custom_layout(layout)
+    return removed
+
+
+def list_staged_covers() -> list[dict]:
+    """All currently staged covers, in the same order the normal PDF uses."""
+    covers = []
+    for folder_key, folder_path in STAGING_FOLDERS.items():
+        for name in list_images(folder_path):
+            covers.append({
+                "folder": folder_key,
+                "file": name,
+                "key": f"{folder_key}|{name}",
+                "type_label": FOLDER_LABELS[folder_key],
+            })
+    return covers
+
+
+def css_safe_url(url: str) -> str:
+    """Make a URL safe inside CSS url('...')."""
+    return url.replace("'", "%27").replace("(", "%28").replace(")", "%29")
+
+
+def build_custom_pdf(layout: dict, fill_empty: str, output_pdf_path: Path) -> Path:
+    cols, rows = grid_dimensions()
+    mode = layout["mode"]
+
+    # grid[row][col] -> cover path (or None = empty)
+    grid = [[None] * cols for _ in range(rows)]
+    for p in layout["placements"]:
+        path = STAGING_FOLDERS[p["folder"]] / p["file"]
+        if mode == "rows":
+            for r in range(p["start"] - 1, p["end"]):
+                for c in range(cols):
+                    grid[r][c] = path
+        else:
+            for c in range(p["start"] - 1, p["end"]):
+                for r in range(rows):
+                    grid[r][c] = path
+
+    if fill_empty == "cycle":
+        staged_paths = [STAGING_FOLDERS[cv["folder"]] / cv["file"] for cv in list_staged_covers()]
+        i = 0
+        for r in range(rows):
+            for c in range(cols):
+                if grid[r][c] is None and staged_paths:
+                    grid[r][c] = staged_paths[i % len(staged_paths)]
+                    i += 1
+
+    srgb_profile = ImageCms.getOpenProfile(str(SRGB_PROFILE_PATH))
+    cmyk_profile = ImageCms.getOpenProfile(str(CMYK_PROFILE_PATH))
+
+    def to_cmyk_reader(path):
+        with Image.open(path) as img:
+            img = img.convert("RGB")
+            cmyk_img = ImageCms.profileToProfile(
+                img,
+                srgb_profile,
+                cmyk_profile,
+                renderingIntent=ImageCms.Intent.PERCEPTUAL,
+                outputMode="CMYK",
+            )
+            buf = io.BytesIO()
+            cmyk_img.save(buf, format="JPEG", quality=95)
+            buf.seek(0)
+            return ImageReader(buf)
+
+    pdf = canvas.Canvas(str(output_pdf_path), pagesize=(PAGE_WIDTH, PAGE_HEIGHT))
+
+    # Register each unique cover once as a reusable Form XObject
+    form_names = {}
+    for row in grid:
+        for path in row:
+            if path is not None and path not in form_names:
+                name = f"custom_cover_{len(form_names)}"
+                form_names[path] = name
+                pdf.beginForm(name, 0, 0, IMG_W, IMG_H)
+                pdf.drawImage(to_cmyk_reader(path), 0, 0, width=IMG_W, height=IMG_H, preserveAspectRatio=False)
+                pdf.endForm()
+
+    grid_w = cols * IMG_W + (cols - 1) * GAP
+    grid_h = rows * IMG_H + (rows - 1) * GAP
+    x_offset = (PAGE_WIDTH - grid_w) / 2
+    y_offset = (PAGE_HEIGHT - grid_h) / 2
+
+    pdf.setFillColorCMYK(*BG_CMYK)
+    pdf.rect(0, 0, PAGE_WIDTH, PAGE_HEIGHT, fill=1, stroke=0)
+    for r in range(rows):
+        for c in range(cols):
+            path = grid[r][c]
+            if path is None:
+                continue
+            x = x_offset + c * (IMG_W + GAP)
+            y = PAGE_HEIGHT - y_offset - IMG_H - r * (IMG_H + GAP)
+            pdf.saveState()
+            pdf.translate(x, y)
+            pdf.doForm(form_names[path])
+            pdf.restoreState()
+    pdf.showPage()
+    pdf.save()
+    return output_pdf_path
+
+
+@app.route("/custom")
+def custom():
+    layout = load_custom_layout()
+    removed = prune_custom_layout(layout)
+    if removed:
+        flash(f"{removed} placement(s) were removed because their cover is no longer staged.", "error")
+
+    cols, rows = grid_dimensions()
+    mode = layout["mode"]
+    limit = rows if mode == "rows" else cols
+    staged = list_staged_covers()
+
+    placed = {}
+    blocks = []
+    assigned_cells = 0
+    for i, p in enumerate(layout["placements"]):
+        n = p["end"] - p["start"] + 1
+        if mode == "rows":
+            top, height = (p["start"] - 1) / rows * 100, n / rows * 100
+            left, width = 0, 100
+            bg_w, bg_h = 100 / cols, 100 / n
+            copies = n * cols
+        else:
+            left, width = (p["start"] - 1) / cols * 100, n / cols * 100
+            top, height = 0, 100
+            bg_w, bg_h = 100 / n, 100 / rows
+            copies = n * rows
+        assigned_cells += copies
+        key = f"{p['folder']}|{p['file']}"
+        placed.setdefault(key, []).append(f"{p['start']}-{p['end']}")
+        blocks.append({
+            "index": i,
+            "folder": p["folder"],
+            "file": p["file"],
+            "url": css_safe_url(url_for("thumbnail", folder=p["folder"], filename=p["file"])),
+            "start": p["start"],
+            "end": p["end"],
+            "copies": copies,
+            "top": round(top, 4), "left": round(left, 4),
+            "width": round(width, 4), "height": round(height, 4),
+            "bg_w": round(bg_w, 4), "bg_h": round(bg_h, 4),
+        })
+
+    map_h = round(MAP_WIDTH_PX * (rows * (IMG_H + GAP)) / (cols * (IMG_W + GAP)))
+    return render_template(
+        "custom.html",
+        staged=staged,
+        placed=placed,
+        blocks=blocks,
+        mode=mode,
+        locked=bool(layout["placements"]),
+        unit_title="Rows" if mode == "rows" else "Columns",
+        unit_lower="rows" if mode == "rows" else "columns",
+        limit=limit,
+        cols=cols,
+        rows=rows,
+        map_w=MAP_WIDTH_PX,
+        map_h=map_h,
+        assigned_cells=assigned_cells,
+        total_cells=cols * rows,
+        icc_ready=SRGB_PROFILE_PATH.exists() and CMYK_PROFILE_PATH.exists(),
+        icc_folder=ICC_DIR,
+    )
+
+
+@app.route("/custom/mode", methods=["POST"])
+def custom_mode():
+    layout = load_custom_layout()
+    new_mode = request.form.get("mode")
+    if layout["placements"]:
+        flash("Reset the layout before changing the fill mode.", "error")
+    elif new_mode in ("rows", "columns"):
+        layout["mode"] = new_mode
+        save_custom_layout(layout)
+    return redirect(url_for("custom"))
+
+
+@app.route("/custom/add", methods=["POST"])
+def custom_add():
+    layout = load_custom_layout()
+    cols, rows = grid_dimensions()
+    mode = layout["mode"]
+    limit = rows if mode == "rows" else cols
+    unit = "rows" if mode == "rows" else "columns"
+
+    folder_key, _, filename = request.form.get("cover", "").partition("|")
+    if folder_key not in STAGING_FOLDERS or filename not in list_images(STAGING_FOLDERS[folder_key]):
+        flash("Please select a cover first.", "error")
+        return redirect(url_for("custom"))
+
+    try:
+        start = int(request.form.get("start", ""))
+        end = int(request.form.get("end", ""))
+    except ValueError:
+        flash(f"Please enter a number for both ends of the {unit} range.", "error")
+        return redirect(url_for("custom"))
+
+    if not (1 <= start <= end <= limit):
+        flash(f"Enter {unit} between 1 and {limit}, with 'from' not larger than 'to'.", "error")
+        return redirect(url_for("custom"))
+
+    for p in layout["placements"]:
+        if start <= p["end"] and end >= p["start"]:
+            lo, hi = max(start, p["start"]), min(end, p["end"])
+            flash(
+                f"{unit.capitalize()} {lo} to {hi} are already used by '{p['file']}'. "
+                f"Pick free {unit} or remove that placement first.",
+                "error",
+            )
+            return redirect(url_for("custom"))
+
+    layout["placements"].append({"folder": folder_key, "file": filename, "start": start, "end": end})
+    save_custom_layout(layout)
+    flash(f"Added '{filename}' to {unit} {start}-{end}.", "success")
+    return redirect(url_for("custom"))
+
+
+@app.route("/custom/remove/<int:index>", methods=["POST"])
+def custom_remove(index):
+    layout = load_custom_layout()
+    if 0 <= index < len(layout["placements"]):
+        removed = layout["placements"].pop(index)
+        save_custom_layout(layout)
+        flash(f"Removed '{removed['file']}' from the layout.", "success")
+    return redirect(url_for("custom"))
+
+
+@app.route("/custom/reset", methods=["POST"])
+def custom_reset():
+    save_custom_layout(default_custom_layout())
+    flash("Custom layout reset.", "success")
+    return redirect(url_for("custom"))
+
+
+@app.route("/custom/generate", methods=["POST"])
+def custom_generate():
+    if not (SRGB_PROFILE_PATH.exists() and CMYK_PROFILE_PATH.exists()):
+        flash(f"Missing ICC profiles. Place sRGB.icc and FOGRA39L_coated.icc in {ICC_DIR}", "error")
+        return redirect(url_for("custom"))
+
+    layout = load_custom_layout()
+    removed = prune_custom_layout(layout)
+    if removed:
+        flash(f"{removed} placement(s) were removed because their cover is no longer staged.", "error")
+    if not layout["placements"]:
+        flash("Add at least one book to the layout first.", "error")
+        return redirect(url_for("custom"))
+
+    fill_empty = "cycle" if request.form.get("fill_empty") == "cycle" else "blank"
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    out_path = FINAL_PDF_DIR / f"custom_layout_{timestamp}.pdf"
+    build_custom_pdf(layout, fill_empty, out_path)
+    return send_file(out_path, as_attachment=True, download_name=out_path.name)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,146 @@
+{% extends "layout.html" %}
+{% block content %}
+<style>
+  .pick-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+  .pick { position: relative; width: 150px; box-sizing: border-box; margin: 0; padding: 8px; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; cursor: pointer; font-weight: 400; }
+  .pick input { position: absolute; opacity: 0; pointer-events: none; }
+  .pick:has(input:checked) { border: 2px solid #2563eb; padding: 7px; background: #eff6ff; }
+  .pick:has(input:focus-visible) { outline: 2px solid #2563eb; outline-offset: 2px; }
+  .pick-img { width: 100%; height: 78px; object-fit: contain; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px; }
+  .pick .fn { font-size: 0.75rem; font-weight: 600; color: #334155; margin-top: 6px; word-break: break-all; }
+  .tag { display: inline-block; font-size: 0.7rem; font-weight: 600; padding: 1px 8px; border-radius: 9999px; background: #e2e8f0; color: #334155; margin-top: 4px; }
+  .tag.ok { background: #dcfce7; color: #166534; }
+  .seg-wrap { display: flex; }
+  label.seg { display: flex; align-items: center; gap: 6px; height: 38px; margin: 0; padding: 0 14px; box-sizing: border-box; border: 1px solid #cbd5e1; background: #fff; font-size: 0.9rem; font-weight: 600; color: #334155; cursor: pointer; }
+  label.seg:first-child { border-radius: 6px 0 0 6px; }
+  label.seg:last-child { border-radius: 0 6px 6px 0; border-left: none; }
+  label.seg.on { background: #dbeafe; border-color: #2563eb; color: #1e3a8a; }
+  .num { width: 64px; height: 38px; box-sizing: border-box; padding: 0 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; }
+  .map { position: relative; border: 1px solid #94a3b8; background: #f1f5f9; }
+  .blk { position: absolute; box-sizing: border-box; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; background-repeat: repeat; }
+  .chip { background: #fff; color: #0f172a; font-size: 0.72rem; font-weight: 600; padding: 3px 8px; border-radius: 4px; border: 1px solid #cbd5e1; text-align: center; max-width: 90%; word-break: break-all; }
+  .asg { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 8px; }
+  .asg-img { width: 44px; height: 32px; object-fit: cover; border: 1px solid #cbd5e1; border-radius: 4px; flex: 0 0 auto; }
+</style>
+
+<h1>Custom Layout</h1>
+<p class="muted">A separate sheet where you choose exactly which book fills which {{ unit_lower }}. Pick a book by its picture, set the {{ unit_lower }}, and add it. Nothing here changes the Final PDF page. Generating this sheet does not clear your staged covers.</p>
+
+{% if not icc_ready %}
+<div class="flash error">
+  ICC profiles missing. Place <code>sRGB.icc</code> and <code>FOGRA39L_coated.icc</code> inside <code>{{ icc_folder }}</code>, then reload this page.
+</div>
+{% endif %}
+
+<!-- Empty form that the Rows/Columns radios attach to (avoids nested forms) -->
+<form id="mode-form" method="post" action="{{ url_for('custom_mode') }}"></form>
+
+<form method="post" action="{{ url_for('custom_add') }}">
+  <div class="card">
+    <h3 style="margin: 0 0 4px 0;">1. Pick a book</h3>
+    <p class="muted" style="margin: 0 0 12px 0;">All covers currently staged. Click one to select it.</p>
+    {% if staged %}
+    <div class="pick-grid">
+      {% for c in staged %}
+      <label class="pick">
+        <input type="radio" name="cover" value="{{ c.key }}" required>
+        <img class="pick-img" src="{{ url_for('thumbnail', folder=c.folder, filename=c.file) }}" alt="{{ c.file }}" loading="lazy">
+        <div class="fn">{{ c.file }}</div>
+        <span class="tag">{{ c.type_label }}</span>
+        {% if placed.get(c.key) %}
+        <br><span class="tag ok">Placed: {{ unit_lower }} {{ placed[c.key]|join(', ') }}</span>
+        {% endif %}
+      </label>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted" style="font-style: italic;">No covers staged. Add covers in the 2-Part, 3-Part, or Full Cover tabs first.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3 style="margin: 0 0 12px 0;">2. Choose where it goes</h3>
+    <div style="display: flex; gap: 18px; align-items: flex-end; flex-wrap: wrap;">
+      <div>
+        <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 4px;">Fill by</div>
+        <div class="seg-wrap">
+          <label class="seg {% if mode == 'rows' %}on{% endif %}">
+            <input type="radio" name="mode" value="rows" form="mode-form" onchange="this.form.submit()" {% if mode == 'rows' %}checked{% endif %} {% if locked %}disabled{% endif %}>Rows
+          </label>
+          <label class="seg {% if mode == 'columns' %}on{% endif %}">
+            <input type="radio" name="mode" value="columns" form="mode-form" onchange="this.form.submit()" {% if mode == 'columns' %}checked{% endif %} {% if locked %}disabled{% endif %}>Columns
+          </label>
+        </div>
+      </div>
+      <div>
+        <label for="start" style="margin-top: 0;">{{ unit_title }} (1 to {{ limit }})</label>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <input id="start" class="num" type="number" name="start" min="1" max="{{ limit }}" required>
+          <span class="muted">to</span>
+          <input aria-label="{{ unit_title }} to" class="num" type="number" name="end" min="1" max="{{ limit }}" required>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary" style="margin: 0;" {% if not staged %}disabled{% endif %}>Add to layout</button>
+    </div>
+    <p class="muted" style="margin: 10px 0 0 0;">
+      The sheet has {{ cols }} columns x {{ rows }} rows.
+      {% if locked %}The fill mode is locked while the layout has books; use <strong>Reset layout</strong> to change it.{% else %}You can change the fill mode until the first book is added.{% endif %}
+    </p>
+  </div>
+</form>
+
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+    <h3 style="margin: 0;">3. Sheet preview ({{ cols }} columns x {{ rows }} rows)</h3>
+    {% if blocks %}
+    <form method="post" action="{{ url_for('custom_reset') }}" onsubmit="return confirm('Reset the whole custom layout?');" style="margin: 0;">
+      <button type="submit" class="btn-clear">Reset layout</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <div style="display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap;">
+    <div style="flex: 0 0 {{ map_w }}px;">
+      <div class="map" style="width: {{ map_w }}px; height: {{ map_h }}px;">
+        {% for b in blocks %}
+        <div class="blk" style="top: {{ b.top }}%; left: {{ b.left }}%; width: {{ b.width }}%; height: {{ b.height }}%; background-image: url('{{ b.url }}'); background-size: {{ b.bg_w }}% {{ b.bg_h }}%;">
+          <span class="chip">{{ b.file }}<br>{{ unit_lower }} {{ b.start }}-{{ b.end }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      <p class="muted" style="margin: 8px 0 0 0; font-size: 0.75rem;">Each block repeats the cover picture. Grey area is unassigned.</p>
+    </div>
+
+    <div style="flex: 1; min-width: 260px;">
+      <h4 style="margin: 0 0 10px 0;">Assignments</h4>
+      {% for b in blocks %}
+      <div class="asg">
+        <img class="asg-img" src="{{ url_for('thumbnail', folder=b.folder, filename=b.file) }}" alt="{{ b.file }}">
+        <div style="flex: 1; font-size: 0.9rem; word-break: break-all;">
+          <strong>{{ b.file }}</strong><br>
+          <span class="muted">{{ unit_title }} {{ b.start }}-{{ b.end }} &middot; {{ b.copies }} copies</span>
+        </div>
+        <form method="post" action="{{ url_for('custom_remove', index=b.index) }}" style="margin: 0;">
+          <button type="submit" class="btn-delete">Remove</button>
+        </form>
+      </div>
+      {% else %}
+      <p class="muted" style="font-style: italic;">Nothing placed yet.</p>
+      {% endfor %}
+
+      <form method="post" action="{{ url_for('custom_generate') }}" style="margin-top: 18px;">
+        <h4 style="margin: 0 0 8px 0;">Unassigned cells</h4>
+        <label style="display: flex; gap: 8px; margin: 0 0 8px 0; font-weight: 400;"><input type="radio" name="fill_empty" value="blank" checked>Leave blank</label>
+        <label style="display: flex; gap: 8px; margin: 0 0 18px 0; font-weight: 400;"><input type="radio" name="fill_empty" value="cycle">Fill by cycling through the staged books</label>
+
+        <div class="flash success" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: 0.85rem;">
+          {{ assigned_cells }} of {{ total_cells }} cells assigned &middot; {{ total_cells - assigned_cells }} empty
+        </div>
+        <button type="submit" class="btn-primary" style="margin: 0; width: 100%; height: 42px;" {% if not icc_ready or not blocks %}disabled{% endif %}>
+          Generate &amp; download custom PDF
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -69,7 +69,15 @@
     <a href="{{ url_for('pdf') }}" style="text-decoration: none; font-weight: 600; color: #2563eb;">Open →</a>
   </div>
 </div>
-
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <h3 style="margin: 0 0 4px 0;">5. Custom layout (optional)</h3>
+      <p style="margin: 0;" class="muted">Place chosen books in specific rows or columns of a separate sheet.</p>
+    </div>
+    <a href="{{ url_for('custom') }}" style="text-decoration: none; font-weight: 600; color: #2563eb;">Open →</a>
+  </div>
+</div>
 {% if recent_batches %}
 <div class="section-header" style="margin-top: 36px;">
   <strong>Recent Completed Batches</strong>
