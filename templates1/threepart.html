@@ -1,38 +1,178 @@
 {% extends "layout.html" %}
 {% block content %}
-<h1>Three-Part Covers</h1>
-<p class="muted">Upload one back image, one spine image, and one front image per book, then click "Add Book". The page stays open so you can add the next book right away.</p>
+<style>
+  /* Form Inputs Styling */
+  .form-group {
+    margin-bottom: 20px;
+  }
+  .form-label {
+    display: block;
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+  .form-input-text {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    background: #ffffff;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-input-text:focus {
+    border-color: var(--terracotta);
+  }
 
-<div class="card">
+  /* File Input styling */
+  input[type=file] {
+    font-family: inherit;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+  input[type=file]::file-selector-button {
+    background: #ffffff;
+    color: var(--text);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-right: 12px;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  input[type=file]::file-selector-button:hover {
+    background: #f5efe6;
+  }
+
+  /* Toolbar above Grid */
+  .section-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 36px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  /* Thumbnail Grid */
+  .thumb-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .thumb-card {
+    background: #ffffff;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 3px 3px 0px var(--border);
+    padding: 10px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .thumb-img {
+    width: 100%;
+    height: 90px;
+    object-fit: contain;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+  }
+  .thumb-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin: 8px 0;
+    color: var(--text);
+    word-break: break-all;
+  }
+
+  /* Action Buttons */
+  .btn-delete {
+    background: #ffffff;
+    color: #991b1b;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 4px 14px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-delete:hover {
+    background: #fee2e2;
+  }
+
+  .btn-clear-section {
+    background: #ffffff;
+    color: #991b1b;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-clear-section:hover {
+    background: #fee2e2;
+  }
+</style>
+
+<!-- Heading & Subtitle -->
+<div style="margin-bottom: 28px;">
+  <h1 style="font-size: 2.6rem; margin: 0 0 8px 0;">Three-part covers</h1>
+  <p class="muted" style="margin: 0;">Upload back, spine and front for each book. They are joined at the exact miniature size.</p>
+</div>
+
+<!-- Upload Card -->
+<div class="neo-card" style="padding: 28px;">
   <form method="post" enctype="multipart/form-data">
-    <label>Book / Output Name <span class="muted" style="font-weight: normal;">(optional &mdash; auto-detected from front image if blank)</span></label>
-    <input type="text" name="book_name" placeholder="e.g. Harry Potter 1, Hobbit..." style="width: 100%; box-sizing: border-box; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem;">
+    <div class="form-group">
+      <label class="form-label" for="book_name">Book / output name (optional)</label>
+      <input type="text" id="book_name" name="book_name" class="form-input-text" placeholder="e.g. Dune, Gatsby...">
+    </div>
 
-    <label>Back side</label>
-    <input type="file" name="back" accept="image/*" required>
+    <div class="form-group">
+      <label class="form-label">Back side</label>
+      <input type="file" name="back" accept="image/*" required>
+    </div>
 
-    <label>Spine</label>
-    <input type="file" name="spine" accept="image/*" required>
+    <div class="form-group">
+      <label class="form-label">Spine</label>
+      <input type="file" name="spine" accept="image/*" required>
+    </div>
 
-    <label>Front side</label>
-    <input type="file" name="front" accept="image/*" required>
+    <div class="form-group" style="margin-bottom: 28px;">
+      <label class="form-label">Front side</label>
+      <input type="file" name="front" accept="image/*" required>
+    </div>
 
-    <button type="submit" class="btn-primary">Add Book</button>
+    <button type="submit" class="btn-terra">Add book</button>
   </form>
 </div>
 
-<div class="section-header">
+<!-- Queue Summary & Clear Button -->
+<div class="section-toolbar">
   <div>
-    <strong>{{ images|length }}</strong> book(s) in this section
-    <span class="muted">(Folder: <code>{{ out_folder }}</code>)</span>
+    <strong>{{ images|length }} book(s)</strong> in this section <span class="muted">(folder: data/...)</span>
   </div>
   {% if images %}
   <form method="post" action="{{ url_for('clear_section', folder='3part_output') }}" onsubmit="return confirm('Delete all {{ images|length }} 3-part covers?');" style="margin:0;">
-    <button type="submit" class="btn-clear">Clear 3-Part Covers</button>
+    <button type="submit" class="btn-clear-section">Clear 3-part covers</button>
   </form>
   {% endif %}
 </div>
 
+<!-- Staged Covers Grid -->
 {% if images %}
 <div class="thumb-grid">
   {% for img in images %}
@@ -40,13 +180,13 @@
     <img class="thumb-img" src="{{ url_for('thumbnail', folder='3part_output', filename=img) }}" alt="{{ img }}" loading="lazy">
     <div class="thumb-title">{{ img }}</div>
     <form method="post" action="{{ url_for('delete_file', folder='3part_output', filename=img) }}" onsubmit="return confirm('Delete {{ img }}?');" style="margin:0;">
-      <button type="submit" class="btn-delete">🗑️ Delete</button>
+      <button type="submit" class="btn-delete">Delete</button>
     </form>
   </div>
   {% endfor %}
 </div>
 {% else %}
-<p class="muted" style="margin-top: 20px; font-style: italic;">No 3-part covers added yet.</p>
+<p class="muted" style="margin-top: 24px; font-style: italic;">No 3-part covers added yet.</p>
 {% endif %}
 
 {% endblock %}

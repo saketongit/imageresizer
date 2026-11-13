@@ -50,6 +50,48 @@ FINAL_PDF_DIR = DATA_DIR / "final_pdf"
 ICC_DIR = DATA_DIR / "icc_profiles"
 COMPLETED_BATCHES_DIR = DATA_DIR / "completed_batches"
 
+SETTINGS_PATH = DATA_DIR / "settings.json"
+
+DEFAULT_SETTINGS = {
+    "book_width_cm": 2.2,
+    "book_height_cm": 1.6,
+    "spine_width_cm": 0.2,
+    "pdf_preset": "12x18",
+    "pdf_width_in": 12.0,
+    "pdf_height_in": 18.0,
+}
+
+PRESET_DIMENSIONS = {
+    "12x18": (12.0, 18.0),
+    "a4": (8.27, 11.69),
+    "a3": (11.69, 16.54),
+    "letter": (8.5, 11.0),
+}
+
+def load_settings() -> dict:
+    try:
+        if SETTINGS_PATH.exists():
+            data = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+            merged = DEFAULT_SETTINGS.copy()
+            merged.update(data)
+            return merged
+    except Exception:
+        pass
+    return DEFAULT_SETTINGS.copy()
+
+def save_settings(data: dict) -> None:
+    SETTINGS_PATH.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+def get_pdf_dimensions(settings: dict) -> tuple[float, float]:
+    """Returns (width_in_pts, height_in_pts) for ReportLab canvas."""
+    preset = settings.get("pdf_preset", "12x18")
+    if preset in PRESET_DIMENSIONS:
+        w_in, h_in = PRESET_DIMENSIONS[preset]
+    else:
+        w_in = float(settings.get("pdf_width_in", 12.0))
+        h_in = float(settings.get("pdf_height_in", 18.0))
+    return w_in * inch, h_in * inch
+
 for d in (TWOPART_OUT, THREEPART_OUT, FULLCOVER_OUT, FINAL_PDF_DIR, ICC_DIR, COMPLETED_BATCHES_DIR):
     d.mkdir(parents=True, exist_ok=True)
 
@@ -276,9 +318,18 @@ def twopart():
             flash("Please choose both a back and a front image.", "error")
             return redirect(url_for("twopart"))
 
-        h_px = cm_to_px(HEIGHT_CM, DPI_COMBINE)
-        back_img, back_w, _ = load_part(back, BACK_WIDTH_CM_2PART, HEIGHT_CM)
-        front_img, front_w, _ = load_part(front, FRONT_WIDTH_CM, HEIGHT_CM)
+        settings = load_settings()
+        bw = settings["book_width_cm"]
+        bh = settings["book_height_cm"]
+        spine_w = min(settings.get("spine_width_cm", 0.2), bw * 0.8)
+
+        # Front is front face; Back covers the back + spine wrap
+        front_w_cm = (bw - spine_w) / 2.0
+        back_w_cm = bw - front_w_cm
+
+        h_px = cm_to_px(bh, DPI_COMBINE)
+        back_img, back_w, _ = load_part(back, back_w_cm, bh)
+        front_img, front_w, _ = load_part(front, front_w_cm, bh)
 
         total_w = back_w + front_w
         combined = Image.new("RGB", (total_w, h_px), "white")
@@ -308,10 +359,19 @@ def threepart():
             flash("Please choose a back, front, AND spine image.", "error")
             return redirect(url_for("threepart"))
 
-        h_px = cm_to_px(HEIGHT_CM, DPI_COMBINE)
-        back_img, back_w, _ = load_part(back, BACK_WIDTH_CM_3PART, HEIGHT_CM)
-        spine_img, spine_w, _ = load_part(spine, SPINE_WIDTH_CM, HEIGHT_CM)
-        front_img, front_w, _ = load_part(front, FRONT_WIDTH_CM, HEIGHT_CM)
+        settings = load_settings()
+        bw = settings["book_width_cm"]
+        bh = settings["book_height_cm"]
+        spine_w_cm = min(settings.get("spine_width_cm", 0.2), bw * 0.8)
+
+        # Front and Back are strictly equal
+        front_w_cm = (bw - spine_w_cm) / 2.0
+        back_w_cm = front_w_cm
+
+        h_px = cm_to_px(bh, DPI_COMBINE)
+        back_img, back_w, _ = load_part(back, back_w_cm, bh)
+        spine_img, spine_w, _ = load_part(spine, spine_w_cm, bh)
+        front_img, front_w, _ = load_part(front, front_w_cm, bh)
 
         total_w = back_w + spine_w + front_w
         combined = Image.new("RGB", (total_w, h_px), "white")
@@ -342,8 +402,9 @@ def fullcover():
             flash("Please choose at least one image.", "error")
             return redirect(url_for("fullcover"))
 
-        w_px = cm_to_px(FULL_WIDTH_CM, DPI_FULLCOVER)
-        h_px = cm_to_px(HEIGHT_CM, DPI_FULLCOVER)
+        settings = load_settings()
+        w_px = cm_to_px(settings["book_width_cm"], DPI_FULLCOVER)
+        h_px = cm_to_px(settings["book_height_cm"], DPI_FULLCOVER)
 
         saved = 0
         for f in files:
@@ -477,37 +538,41 @@ def build_pdf(image_paths, output_pdf_path: Path) -> Path:
 
     readers = [to_cmyk_reader(p) for p in image_paths]
 
-    usable_w = PAGE_WIDTH - 2 * MARGIN
-    usable_h = PAGE_HEIGHT - 2 * MARGIN
-    cols = int((usable_w + GAP) // (IMG_W + GAP))
-    rows = int((usable_h + GAP) // (IMG_H + GAP))
+    settings = load_settings()
+    page_w, page_h = get_pdf_dimensions(settings)
+    img_w = settings["book_width_cm"] * cm
+    img_h = settings["book_height_cm"] * cm
+
+    usable_w = page_w - 2 * MARGIN
+    usable_h = page_h - 2 * MARGIN
+    cols = max(1, int((usable_w + GAP) // (img_w + GAP)))
+    rows = max(1, int((usable_h + GAP) // (img_h + GAP)))
     slots_per_page = cols * rows
-    grid_w = cols * IMG_W + (cols - 1) * GAP
-    x_offset = (PAGE_WIDTH - grid_w) / 2
-    grid_h = rows * IMG_H + (rows - 1) * GAP
-    y_offset = (PAGE_HEIGHT - grid_h) / 2
+    grid_w = cols * img_w + (cols - 1) * GAP
+    x_offset = (page_w - grid_w) / 2
+    grid_h = rows * img_h + (rows - 1) * GAP
+    y_offset = (page_h - grid_h) / 2
     total_unique = len(readers)
     total_pages = max(1, -(-total_unique // slots_per_page))
 
-
-    c = canvas.Canvas(str(output_pdf_path), pagesize=(PAGE_WIDTH, PAGE_HEIGHT))
+    c = canvas.Canvas(str(output_pdf_path), pagesize=(page_w, page_h))
 
     # Register each unique cover once as a reusable Form XObject
     for i, reader in enumerate(readers):
-        c.beginForm(f"cover_{i}", 0, 0, IMG_W, IMG_H)
-        c.drawImage(reader, 0, 0, width=IMG_W, height=IMG_H, preserveAspectRatio=False)
+        c.beginForm(f"cover_{i}", 0, 0, img_w, img_h)
+        c.drawImage(reader, 0, 0, width=img_w, height=img_h, preserveAspectRatio=False)
         c.endForm()
 
     idx = 0
     for _ in range(total_pages):
         c.setFillColorCMYK(*BG_CMYK)
-        c.rect(0, 0, PAGE_WIDTH, PAGE_HEIGHT, fill=1, stroke=0)
+        c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
         for row in range(rows):
             for col in range(cols):
                 form_name = f"cover_{idx % total_unique}"
                 idx += 1
-                x = x_offset + col * (IMG_W + GAP)
-                y = PAGE_HEIGHT - y_offset - IMG_H - row * (IMG_H + GAP)
+                x = x_offset + col * (img_w + GAP)
+                y = page_h - y_offset - img_h - row * (img_h + GAP)
                 c.saveState()
                 c.translate(x, y)
                 c.doForm(form_name)
@@ -534,10 +599,15 @@ MAP_WIDTH_PX = 360
 
 def grid_dimensions() -> tuple[int, int]:
     """(columns, rows) that fit on the sheet. Same maths as build_pdf."""
-    usable_w = PAGE_WIDTH - 2 * MARGIN
-    usable_h = PAGE_HEIGHT - 2 * MARGIN
-    cols = int((usable_w + GAP) // (IMG_W + GAP))
-    rows = int((usable_h + GAP) // (IMG_H + GAP))
+    settings = load_settings()
+    page_w, page_h = get_pdf_dimensions(settings)
+    img_w = settings["book_width_cm"] * cm
+    img_h = settings["book_height_cm"] * cm
+
+    usable_w = page_w - 2 * MARGIN
+    usable_h = page_h - 2 * MARGIN
+    cols = max(1, int((usable_w + GAP) // (img_w + GAP)))
+    rows = max(1, int((usable_h + GAP) // (img_h + GAP)))
     return cols, rows
 
 
@@ -636,7 +706,12 @@ def build_custom_pdf(layout: dict, fill_empty: str, output_pdf_path: Path) -> Pa
             buf.seek(0)
             return ImageReader(buf)
 
-    pdf = canvas.Canvas(str(output_pdf_path), pagesize=(PAGE_WIDTH, PAGE_HEIGHT))
+    settings = load_settings()
+    page_w, page_h = get_pdf_dimensions(settings)
+    img_w = settings["book_width_cm"] * cm
+    img_h = settings["book_height_cm"] * cm
+
+    pdf = canvas.Canvas(str(output_pdf_path), pagesize=(page_w, page_h))
 
     # Register each unique cover once as a reusable Form XObject
     form_names = {}
@@ -645,24 +720,24 @@ def build_custom_pdf(layout: dict, fill_empty: str, output_pdf_path: Path) -> Pa
             if path is not None and path not in form_names:
                 name = f"custom_cover_{len(form_names)}"
                 form_names[path] = name
-                pdf.beginForm(name, 0, 0, IMG_W, IMG_H)
-                pdf.drawImage(to_cmyk_reader(path), 0, 0, width=IMG_W, height=IMG_H, preserveAspectRatio=False)
+                pdf.beginForm(name, 0, 0, img_w, img_h)
+                pdf.drawImage(to_cmyk_reader(path), 0, 0, width=img_w, height=img_h, preserveAspectRatio=False)
                 pdf.endForm()
 
-    grid_w = cols * IMG_W + (cols - 1) * GAP
-    grid_h = rows * IMG_H + (rows - 1) * GAP
-    x_offset = (PAGE_WIDTH - grid_w) / 2
-    y_offset = (PAGE_HEIGHT - grid_h) / 2
+    grid_w = cols * img_w + (cols - 1) * GAP
+    grid_h = rows * img_h + (rows - 1) * GAP
+    x_offset = (page_w - grid_w) / 2
+    y_offset = (page_h - grid_h) / 2
 
     pdf.setFillColorCMYK(*BG_CMYK)
-    pdf.rect(0, 0, PAGE_WIDTH, PAGE_HEIGHT, fill=1, stroke=0)
+    pdf.rect(0, 0, page_w, page_h, fill=1, stroke=0)
     for r in range(rows):
         for c in range(cols):
             path = grid[r][c]
             if path is None:
                 continue
-            x = x_offset + c * (IMG_W + GAP)
-            y = PAGE_HEIGHT - y_offset - IMG_H - r * (IMG_H + GAP)
+            x = x_offset + c * (img_w + GAP)
+            y = page_h - y_offset - img_h - r * (img_h + GAP)
             pdf.saveState()
             pdf.translate(x, y)
             pdf.doForm(form_names[path])
@@ -715,7 +790,10 @@ def custom():
             "bg_w": round(bg_w, 4), "bg_h": round(bg_h, 4),
         })
 
-    map_h = round(MAP_WIDTH_PX * (rows * (IMG_H + GAP)) / (cols * (IMG_W + GAP)))
+    settings = load_settings()
+    img_w = settings["book_width_cm"] * cm
+    img_h = settings["book_height_cm"] * cm
+    map_h = round(MAP_WIDTH_PX * (rows * (img_h + GAP)) / (cols * (img_w + GAP)))
     return render_template(
         "custom.html",
         staged=staged,
@@ -826,6 +904,26 @@ def custom_generate():
     build_custom_pdf(layout, fill_empty, out_path)
     return send_file(out_path, as_attachment=True, download_name=out_path.name)
 
+
+# -------------------------------------------------------------- SETTINGS ----
+@app.route("/settings", methods=["GET", "POST"])
+def settings():
+    s = load_settings()
+    if request.method == "POST":
+        try:
+            s["book_width_cm"] = float(request.form.get("book_width_cm", 2.2))
+            s["book_height_cm"] = float(request.form.get("book_height_cm", 1.6))
+            s["spine_width_cm"] = float(request.form.get("spine_width_cm", 0.2))
+            s["pdf_preset"] = request.form.get("pdf_preset", "12x18")
+            s["pdf_width_in"] = float(request.form.get("pdf_width_in", 12.0))
+            s["pdf_height_in"] = float(request.form.get("pdf_height_in", 18.0))
+            save_settings(s)
+            flash("Settings saved successfully!", "success")
+        except ValueError:
+            flash("Invalid number entered. Please check your inputs.", "error")
+        return redirect(url_for("settings"))
+
+    return render_template("settings.html", s=s)
 
 if __name__ == "__main__":
     app.run(debug=True)

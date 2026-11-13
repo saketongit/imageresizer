@@ -1,53 +1,176 @@
 {% extends "layout.html" %}
 {% block content %}
-<h1>Generate Final Print PDF</h1>
-<p class="muted">Review all covers ready to be placed on the 12" x 18" sheet. Covers are automatically gathered from 2-part, 3-part, and full-cover steps.</p>
+<style>
+  /* Sage Green Banner for Archiving Note */
+  .sage-callout {
+    background: var(--sage);
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 16px 22px;
+    margin-bottom: 24px;
+    font-size: 0.95rem;
+    color: var(--text);
+  }
+  .sage-callout strong {
+    font-weight: 700;
+  }
 
-<div class="flash success" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe;">
-  💡 <strong>Automatic Batch Archiving</strong>: When you generate the PDF, all images and the compiled PDF are saved into a new timestamped folder under <code>{{ completed_batches_dir }}</code>, and staging folders are automatically reset for your next run.
+  /* Action Queue Card */
+  .queue-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 24px 28px;
+    margin-bottom: 36px;
+  }
+  .queue-title {
+    font-family: 'Lora', Georgia, serif;
+    font-size: 1.55rem;
+    font-weight: 700;
+    margin: 0 0 4px 0;
+  }
+  .queue-meta {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  /* Action Buttons */
+  .btn-clear-queue {
+    background: #ffffff;
+    color: var(--text);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 10px 20px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-clear-queue:hover {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  /* Category Headings & Dividers */
+  .category-header {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 28px 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 1.5px solid var(--border);
+  }
+
+  /* Thumbnail Grid */
+  .thumb-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .thumb-card {
+    background: #ffffff;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 3px 3px 0px var(--border);
+    padding: 10px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .thumb-img {
+    width: 100%;
+    height: 90px;
+    object-fit: contain;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+  }
+  .thumb-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin: 8px 0;
+    color: var(--text);
+    word-break: break-all;
+  }
+
+  .btn-delete {
+    background: #ffffff;
+    color: #991b1b;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 4px 14px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-delete:hover {
+    background: #fee2e2;
+  }
+</style>
+
+<!-- Page Header -->
+<div style="margin-bottom: 24px;">
+  <h1 style="font-size: 2.6rem; margin: 0 0 8px 0;">Generate the print PDF</h1>
+  <p class="muted" style="margin: 0;">Every cover below is placed on one sheet in CMYK. Short on covers? They repeat to fill the sheet.</p>
+</div>
+
+<!-- Sage Green Callout Banner -->
+<div class="sage-callout">
+  <strong>Automatic batch archiving.</strong> After generating, all images and the PDF are saved in a new dated folder, and the staging folders are cleared for your next run.
 </div>
 
 {% if not icc_ready %}
 <div class="flash error">
-  ICC profiles missing. Place <code>sRGB.icc</code> and <code>FOGRA39L_coated.icc</code> inside <code>{{ icc_folder }}</code>, then reload this page.
+  ⚠ ICC profiles missing. Place <code>sRGB.icc</code> and <code>FOGRA39L_coated.icc</code> inside <code>{{ icc_folder }}</code>, then reload this page.
 </div>
 {% endif %}
 
-<div class="card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+<!-- Action Queue Card -->
+<div class="neo-card queue-card">
   <div>
-    <h3 style="margin: 0 0 4px 0;">Total Queued Covers: <strong>{{ total_queued }}</strong></h3>
-    <span class="muted">
-      2-Part: {{ twopart_imgs|length }} &bull; 
-      3-Part: {{ threepart_imgs|length }} &bull; 
-      Full Cover: {{ fullcover_imgs|length }}
-    </span>
+    <div class="queue-title">{{ total_queued }} covers queued</div>
+    <p class="queue-meta">
+      2-part {{ twopart_imgs|length }} &middot; 
+      3-part {{ threepart_imgs|length }} &middot; 
+      Full cover {{ fullcover_imgs|length }} &middot; 
+      {% if icc_ready %}ICC profiles found{% else %}<span style="color: #991b1b; font-weight: bold;">ICC profiles missing</span>{% endif %}
+    </p>
   </div>
-  <div style="display: flex; gap: 10px; align-items: center;">
+
+  <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
     {% if total_queued > 0 %}
-    <form method="post" action="{{ url_for('clear_all') }}" onsubmit="return confirm('Clear ALL {{ total_queued }} queued covers?');" style="margin:0;">
-      <button type="submit" class="btn-clear">🗑️ Clear Queue</button>
+    <form method="post" action="{{ url_for('clear_all') }}" onsubmit="return confirm('Clear ALL {{ total_queued }} queued covers across all sections?');" style="margin:0;">
+      <button type="submit" class="btn-clear-queue">Clear queue</button>
     </form>
     {% endif %}
+
     <form method="post" style="margin: 0;">
-      <button type="submit" class="btn-primary" style="margin:0;" {% if not icc_ready or total_queued == 0 %}disabled{% endif %}>
-        📄 Generate &amp; Download PDF
+      <button type="submit" class="btn-terra" {% if not icc_ready or total_queued == 0 %}disabled style="opacity: 0.5; cursor: not-allowed;"{% endif %}>
+        Generate &amp; download PDF
       </button>
     </form>
   </div>
 </div>
 
+<!-- Categorized Covers -->
 {% if total_queued > 0 %}
   {% if twopart_imgs %}
-  <div class="section-header">
-    <strong>Two-Part Covers ({{ twopart_imgs|length }})</strong>
-  </div>
+  <div class="category-header">Two-part ({{ twopart_imgs|length }})</div>
   <div class="thumb-grid">
     {% for img in twopart_imgs %}
     <div class="thumb-card">
       <img class="thumb-img" src="{{ url_for('thumbnail', folder='2part_output', filename=img) }}" alt="{{ img }}" loading="lazy">
       <div class="thumb-title">{{ img }}</div>
       <form method="post" action="{{ url_for('delete_file', folder='2part_output', filename=img) }}" onsubmit="return confirm('Delete {{ img }}?');" style="margin:0;">
-        <button type="submit" class="btn-delete">🗑️ Delete</button>
+        <button type="submit" class="btn-delete">Delete</button>
       </form>
     </div>
     {% endfor %}
@@ -55,16 +178,14 @@
   {% endif %}
 
   {% if threepart_imgs %}
-  <div class="section-header">
-    <strong>Three-Part Covers ({{ threepart_imgs|length }})</strong>
-  </div>
+  <div class="category-header">Three-part ({{ threepart_imgs|length }})</div>
   <div class="thumb-grid">
     {% for img in threepart_imgs %}
     <div class="thumb-card">
       <img class="thumb-img" src="{{ url_for('thumbnail', folder='3part_output', filename=img) }}" alt="{{ img }}" loading="lazy">
       <div class="thumb-title">{{ img }}</div>
       <form method="post" action="{{ url_for('delete_file', folder='3part_output', filename=img) }}" onsubmit="return confirm('Delete {{ img }}?');" style="margin:0;">
-        <button type="submit" class="btn-delete">🗑️ Delete</button>
+        <button type="submit" class="btn-delete">Delete</button>
       </form>
     </div>
     {% endfor %}
@@ -72,42 +193,22 @@
   {% endif %}
 
   {% if fullcover_imgs %}
-  <div class="section-header">
-    <strong>Full Covers ({{ fullcover_imgs|length }})</strong>
-  </div>
+  <div class="category-header">Full covers ({{ fullcover_imgs|length }})</div>
   <div class="thumb-grid">
     {% for img in fullcover_imgs %}
     <div class="thumb-card">
       <img class="thumb-img" src="{{ url_for('thumbnail', folder='fullcover_output', filename=img) }}" alt="{{ img }}" loading="lazy">
       <div class="thumb-title">{{ img }}</div>
       <form method="post" action="{{ url_for('delete_file', folder='fullcover_output', filename=img) }}" onsubmit="return confirm('Delete {{ img }}?');" style="margin:0;">
-        <button type="submit" class="btn-delete">🗑️ Delete</button>
+        <button type="submit" class="btn-delete">Delete</button>
       </form>
     </div>
     {% endfor %}
   </div>
   {% endif %}
 {% else %}
-<div class="card" style="text-align: center; padding: 25px;">
-  <p class="muted" style="margin: 0;">No covers currently staged. Add covers in the 2-Part, 3-Part, or Full Cover tabs.</p>
-</div>
-{% endif %}
-
-{% if recent_batches %}
-<div class="section-header" style="margin-top: 36px;">
-  <strong>Recent Completed Batches</strong>
-</div>
-<div style="margin-top: 10px;">
-  {% for b in recent_batches %}
-  <div class="card" style="padding: 12px 16px; margin: 8px 0;">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-      <div>
-        <strong>{{ b.name }}</strong> &bull; <span class="muted">{{ b.image_count }} cover image(s) + PDF</span>
-      </div>
-      <code style="font-size: 0.75rem;">{{ b.path }}</code>
-    </div>
-  </div>
-  {% endfor %}
+<div class="neo-card" style="text-align: center; padding: 36px;">
+  <p class="muted" style="margin: 0; font-style: italic;">No covers currently queued. Add covers in the 2-Part, 3-Part, or Full Cover tabs first.</p>
 </div>
 {% endif %}
 

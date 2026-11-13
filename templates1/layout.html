@@ -2,63 +2,206 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Book Cover Pipeline</title>
+  <title>Cover Pipeline</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 30px auto; padding: 0 16px; color: #1e293b; background: #f8fafc; }
-    h1 { font-size: 1.5rem; margin-top: 0; color: #0f172a; }
-    h2, h3 { color: #1e293b; }
-    .nav-container { display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; margin-bottom: 20px; }
-    nav a { margin-right: 16px; text-decoration: none; color: #2563eb; font-weight: 500; font-size: 0.95rem; }
-    nav a:hover { text-decoration: underline; }
-    .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 16px 0; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
-    .flash { padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; font-size: 0.95rem; }
-    .flash.success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
-    .flash.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-    label { display: block; margin: 12px 0 4px; font-weight: 600; font-size: 0.9rem; }
-    input[type=file] { display: block; margin-top: 4px; }
-    button.btn-primary { margin-top: 16px; padding: 8px 18px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95rem; font-weight: 500; }
-    button.btn-primary:hover { background: #1d4ed8; }
-    button:disabled { background: #94a3b8 !important; cursor: not-allowed !important; }
-    .btn-clear { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; cursor: pointer; font-weight: 500; }
-    .btn-clear:hover { background: #fee2e2; }
-    .muted { color: #64748b; font-size: 0.9rem; }
-    code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; color: #0f172a; }
-    
-    /* Thumbnail Previews & Gallery */
-    .section-header { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0; }
-    .thumb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 12px; margin-top: 14px; }
-    .thumb-card { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
-    .thumb-img { width: 100%; height: 75px; object-fit: contain; background: #f1f5f9; border-radius: 4px; border: 1px solid #e2e8f0; }
-    .thumb-title { font-size: 0.75rem; font-weight: 600; margin: 6px 0 6px; color: #334155; word-break: break-all; }
-    .btn-delete { background: #ef4444; color: white; padding: 3px 8px; font-size: 0.75rem; border: none; border-radius: 4px; cursor: pointer; margin-top: 0; }
-    .btn-delete:hover { background: #dc2626; }
-    .badge { display: inline-block; padding: 2px 8px; font-size: 0.75rem; font-weight: 600; border-radius: 9999px; background: #e2e8f0; color: #334155; }
-    .badge-primary { background: #dbeafe; color: #1e40af; }
+    :root {
+      --bg: #f5efe6;
+      --card-bg: #fffdf9;
+      --text: #1e1815;
+      --muted: #6b5e55;
+      --terracotta: #a8431b;
+      --terracotta-hover: #8f3815;
+      --sage: #dde8df;
+      --sage-dark: #2d4533;
+      --border: #1e1815;
+      --shadow: 4px 4px 0px #1e1815;
+      --shadow-hover: 6px 6px 0px #1e1815;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      max-width: 980px;
+      margin: 36px auto;
+      padding: 0 24px;
+      color: var(--text);
+      background-color: var(--bg);
+      line-height: 1.5;
+    }
+
+    /* Headings in Serif */
+    h1, h2, h3, .serif {
+      font-family: 'Lora', Georgia, serif;
+      color: var(--text);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    /* Top Navigation */
+    .header-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 24px;
+      margin-bottom: 36px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text);
+      font-family: 'Lora', Georgia, serif;
+      font-size: 1.45rem;
+      font-weight: 700;
+    }
+
+    .brand-icon {
+      width: 26px;
+      height: 32px;
+      background: var(--terracotta);
+      border-radius: 4px;
+      display: inline-block;
+      position: relative;
+      border: 2px solid var(--border);
+      box-shadow: 2px 2px 0px var(--border);
+    }
+    .brand-icon::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 4px; bottom: 0; width: 3px;
+      background: rgba(255,255,255,0.4);
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    nav a {
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 500;
+      font-size: 0.95rem;
+      padding-bottom: 4px;
+      transition: color 0.15s;
+    }
+
+    nav a:hover {
+      color: var(--terracotta);
+    }
+
+    nav a.active {
+      color: var(--terracotta);
+      font-weight: 700;
+      border-bottom: 2.5px solid var(--terracotta);
+    }
+
+    /* Flash Messages */
+    .flash {
+      padding: 12px 18px;
+      border-radius: 10px;
+      margin-bottom: 24px;
+      font-weight: 500;
+      border: 2px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+    .flash.success { background: #dcfce7; color: #14532d; }
+    .flash.error { background: #fee2e2; color: #7f1d1d; }
+
+    /* Reusable Cards & Neo-Brutalist Elements */
+    .neo-card {
+      background: var(--card-bg);
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+      transition: all 0.15s ease-in-out;
+    }
+
+    /* Buttons */
+    .btn-terra {
+      background: var(--terracotta);
+      color: #ffffff;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      padding: 10px 22px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .btn-terra:hover {
+      background: var(--terracotta-hover);
+      transform: translate(-1px, -1px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .btn-white {
+      background: #ffffff;
+      color: var(--text);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      padding: 10px 22px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .btn-white:hover {
+      background: #fafaf9;
+      transform: translate(-1px, -1px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
   </style>
 </head>
 <body>
-  <div class="nav-container">
+  <!-- Header / Nav -->
+  <div class="header-nav">
+    <a href="{{ url_for('index') }}" class="brand">
+      <span class="brand-icon"></span>
+      <span>Cover Pipeline</span>
+    </a>
     <nav>
-      <a href="{{ url_for('index') }}">Home</a>
-      <a href="{{ url_for('twopart') }}">2-Part</a>
-      <a href="{{ url_for('threepart') }}">3-Part</a>
-      <a href="{{ url_for('fullcover') }}">Full Cover</a>
-      <a href="{{ url_for('pdf') }}">Final PDF</a>
-      <a href="{{ url_for('custom') }}">Custom Layout</a>
+      <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Home</a>
+      <a href="{{ url_for('twopart') }}" class="{% if request.endpoint == 'twopart' %}active{% endif %}">2-Part</a>
+      <a href="{{ url_for('threepart') }}" class="{% if request.endpoint == 'threepart' %}active{% endif %}">3-Part</a>
+      <a href="{{ url_for('fullcover') }}" class="{% if request.endpoint == 'fullcover' %}active{% endif %}">Full Cover</a>
+      <a href="{{ url_for('pdf') }}" class="{% if request.endpoint == 'pdf' %}active{% endif %}">Final PDF</a>
+      <a href="{{ url_for('custom') }}" class="{% if request.endpoint == 'custom' %}active{% endif %}">Custom Layout</a>
+      <a href="{{ url_for('settings') }}" class="{% if request.endpoint == 'settings' %}active{% endif %}">⚙️ Settings</a>
     </nav>
-    {% if total_queued and total_queued > 0 %}
-    <form method="post" action="{{ url_for('clear_all') }}" onsubmit="return confirm('Are you sure you want to delete ALL {{ total_queued }} queued covers across all sections?');" style="margin:0;">
-      <button type="submit" class="btn-clear" style="margin:0;">🗑️ Clear Batch ({{ total_queued }})</button>
-    </form>
-    {% endif %}
   </div>
 
+  <!-- Notifications -->
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% for category, message in messages %}
       <div class="flash {{ category }}">{{ message }}</div>
     {% endfor %}
   {% endwith %}
 
+  <!-- Page Content -->
   {% block content %}{% endblock %}
 </body>
 </html>

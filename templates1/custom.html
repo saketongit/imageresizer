@@ -1,44 +1,226 @@
 {% extends "layout.html" %}
 {% block content %}
 <style>
-  .pick-grid { display: flex; flex-wrap: wrap; gap: 12px; }
-  .pick { position: relative; width: 150px; box-sizing: border-box; margin: 0; padding: 8px; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; cursor: pointer; font-weight: 400; }
-  .pick input { position: absolute; opacity: 0; pointer-events: none; }
-  .pick:has(input:checked) { border: 2px solid #2563eb; padding: 7px; background: #eff6ff; }
-  .pick:has(input:focus-visible) { outline: 2px solid #2563eb; outline-offset: 2px; }
-  .pick-img { width: 100%; height: 78px; object-fit: contain; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px; }
-  .pick .fn { font-size: 0.75rem; font-weight: 600; color: #334155; margin-top: 6px; word-break: break-all; }
-  .tag { display: inline-block; font-size: 0.7rem; font-weight: 600; padding: 1px 8px; border-radius: 9999px; background: #e2e8f0; color: #334155; margin-top: 4px; }
-  .tag.ok { background: #dcfce7; color: #166534; }
-  .seg-wrap { display: flex; }
-  label.seg { display: flex; align-items: center; gap: 6px; height: 38px; margin: 0; padding: 0 14px; box-sizing: border-box; border: 1px solid #cbd5e1; background: #fff; font-size: 0.9rem; font-weight: 600; color: #334155; cursor: pointer; }
-  label.seg:first-child { border-radius: 6px 0 0 6px; }
-  label.seg:last-child { border-radius: 0 6px 6px 0; border-left: none; }
-  label.seg.on { background: #dbeafe; border-color: #2563eb; color: #1e3a8a; }
-  .num { width: 64px; height: 38px; box-sizing: border-box; padding: 0 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; }
-  .map { position: relative; border: 1px solid #94a3b8; background: #f1f5f9; }
-  .blk { position: absolute; box-sizing: border-box; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; background-repeat: repeat; }
-  .chip { background: #fff; color: #0f172a; font-size: 0.72rem; font-weight: 600; padding: 3px 8px; border-radius: 4px; border: 1px solid #cbd5e1; text-align: center; max-width: 90%; word-break: break-all; }
-  .asg { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 8px; }
-  .asg-img { width: 44px; height: 32px; object-fit: cover; border: 1px solid #cbd5e1; border-radius: 4px; flex: 0 0 auto; }
+  /* Pick a book gallery */
+  .pick-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 14px;
+  }
+  .pick {
+    position: relative;
+    width: 140px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 8px;
+    background: #ffffff;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .pick input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+  /* Selected terracotta highlight from PDF */
+  .pick:has(input:checked) {
+    border: 3px solid var(--terracotta);
+    box-shadow: 2px 2px 0px var(--border);
+    padding: 7px;
+    background: #fffcf8;
+  }
+  .pick:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 2px 2px 0px var(--border);
+  }
+  .pick-img {
+    width: 100%;
+    height: 75px;
+    object-fit: contain;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+  }
+  .pick .fn {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-top: 6px;
+    word-break: break-all;
+  }
+  .tag {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 1px 8px;
+    border-radius: 9999px;
+    background: #f1f5f9;
+    color: var(--muted);
+    margin-top: 4px;
+    border: 1px solid #e2e8f0;
+  }
+  .tag.ok {
+    background: #dcfce7;
+    color: #14532d;
+    border-color: #86efac;
+  }
+
+  /* Segmented Fill By (Rows / Columns) */
+  .seg-wrap {
+    display: flex;
+  }
+  label.seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    margin: 0;
+    padding: 0 16px;
+    box-sizing: border-box;
+    border: 2px solid var(--border);
+    background: #ffffff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  label.seg:first-child {
+    border-radius: 8px 0 0 8px;
+  }
+  label.seg:last-child {
+    border-radius: 0 8px 8px 0;
+    border-left: none;
+  }
+  label.seg.on {
+    background: var(--terracotta);
+    color: #ffffff;
+  }
+
+  /* Number inputs */
+  .num {
+    width: 64px;
+    height: 40px;
+    box-sizing: border-box;
+    padding: 0 8px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-align: center;
+    background: #ffffff;
+    font-family: inherit;
+  }
+
+  /* Sheet Preview Map */
+  .map {
+    position: relative;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: #f8fafc;
+    overflow: hidden;
+  }
+  .blk {
+    position: absolute;
+    box-sizing: border-box;
+    border: 1.5px solid #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-repeat: repeat;
+  }
+  .chip {
+    background: #ffffff;
+    color: var(--text);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    text-align: center;
+    box-shadow: 1px 1px 0px var(--border);
+  }
+
+  /* Assignments list items */
+  .asg {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    background: #ffffff;
+    box-shadow: 2px 2px 0px var(--border);
+  }
+  .asg-img {
+    width: 44px;
+    height: 34px;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    flex: 0 0 auto;
+  }
+
+  .btn-remove {
+    background: #ffffff;
+    color: var(--text);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 4px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-remove:hover {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  /* Status badge */
+  .sage-badge {
+    background: var(--sage);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text);
+    text-align: center;
+    margin: 16px 0;
+  }
 </style>
 
-<h1>Custom Layout</h1>
-<p class="muted">A separate sheet where you choose exactly which book fills which {{ unit_lower }}. Pick a book by its picture, set the {{ unit_lower }}, and add it. Nothing here changes the Final PDF page. Generating this sheet does not clear your staged covers.</p>
+<!-- Heading -->
+<div style="margin-bottom: 24px;">
+  <h1 style="font-size: 2.6rem; margin: 0 0 8px 0;">Custom layout</h1>
+  <p class="muted" style="margin: 0;">A separate sheet where you choose which book fills which rows. Pick a book by its picture, set the rows, add it.</p>
+</div>
 
 {% if not icc_ready %}
 <div class="flash error">
-  ICC profiles missing. Place <code>sRGB.icc</code> and <code>FOGRA39L_coated.icc</code> inside <code>{{ icc_folder }}</code>, then reload this page.
+  ⚠ ICC profiles missing. Place <code>sRGB.icc</code> and <code>FOGRA39L_coated.icc</code> inside <code>{{ icc_folder }}</code>, then reload this page.
 </div>
 {% endif %}
 
-<!-- Empty form that the Rows/Columns radios attach to (avoids nested forms) -->
+<!-- Form for Rows/Columns mode toggle -->
 <form id="mode-form" method="post" action="{{ url_for('custom_mode') }}"></form>
 
-<form method="post" action="{{ url_for('custom_add') }}">
-  <div class="card">
-    <h3 style="margin: 0 0 4px 0;">1. Pick a book</h3>
-    <p class="muted" style="margin: 0 0 12px 0;">All covers currently staged. Click one to select it.</p>
+<!-- Card 1: Pick a Book & Assign -->
+<div class="neo-card" style="margin-bottom: 24px;">
+  <h3 style="margin: 0 0 4px 0; font-size: 1.3rem;">1 &middot; Pick a book</h3>
+  <p class="muted" style="margin: 0 0 14px 0;">All covers currently staged. Click one to select it.</p>
+
+  <form method="post" action="{{ url_for('custom_add') }}">
     {% if staged %}
     <div class="pick-grid">
       {% for c in staged %}
@@ -48,21 +230,19 @@
         <div class="fn">{{ c.file }}</div>
         <span class="tag">{{ c.type_label }}</span>
         {% if placed.get(c.key) %}
-        <br><span class="tag ok">Placed: {{ unit_lower }} {{ placed[c.key]|join(', ') }}</span>
+        <span class="tag ok">Placed: {{ unit_lower }} {{ placed[c.key]|join(', ') }}</span>
         {% endif %}
       </label>
       {% endfor %}
     </div>
     {% else %}
-    <p class="muted" style="font-style: italic;">No covers staged. Add covers in the 2-Part, 3-Part, or Full Cover tabs first.</p>
+    <p class="muted" style="font-style: italic;">No covers staged yet. Add covers in the 2-Part, 3-Part, or Full Cover tabs first.</p>
     {% endif %}
-  </div>
 
-  <div class="card">
-    <h3 style="margin: 0 0 12px 0;">2. Choose where it goes</h3>
-    <div style="display: flex; gap: 18px; align-items: flex-end; flex-wrap: wrap;">
+    <!-- Controls Toolbar -->
+    <div style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-top: 24px; padding-top: 20px; border-top: 1.5px solid var(--border);">
       <div>
-        <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 4px;">Fill by</div>
+        <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 6px;">Fill by</div>
         <div class="seg-wrap">
           <label class="seg {% if mode == 'rows' %}on{% endif %}">
             <input type="radio" name="mode" value="rows" form="mode-form" onchange="this.form.submit()" {% if mode == 'rows' %}checked{% endif %} {% if locked %}disabled{% endif %}>Rows
@@ -72,47 +252,51 @@
           </label>
         </div>
       </div>
+
       <div>
-        <label for="start" style="margin-top: 0;">{{ unit_title }} (1 to {{ limit }})</label>
-        <div style="display: flex; gap: 6px; align-items: center;">
+        <label for="start" style="display: block; font-weight: 700; font-size: 0.9rem; margin-bottom: 6px;">{{ unit_title }} (1 to {{ limit }})</label>
+        <div style="display: flex; gap: 8px; align-items: center;">
           <input id="start" class="num" type="number" name="start" min="1" max="{{ limit }}" required>
-          <span class="muted">to</span>
+          <span class="muted" style="font-weight: bold;">to</span>
           <input aria-label="{{ unit_title }} to" class="num" type="number" name="end" min="1" max="{{ limit }}" required>
         </div>
       </div>
-      <button type="submit" class="btn-primary" style="margin: 0;" {% if not staged %}disabled{% endif %}>Add to layout</button>
-    </div>
-    <p class="muted" style="margin: 10px 0 0 0;">
-      The sheet has {{ cols }} columns x {{ rows }} rows.
-      {% if locked %}The fill mode is locked while the layout has books; use <strong>Reset layout</strong> to change it.{% else %}You can change the fill mode until the first book is added.{% endif %}
-    </p>
-  </div>
-</form>
 
-<div class="card">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-    <h3 style="margin: 0;">3. Sheet preview ({{ cols }} columns x {{ rows }} rows)</h3>
+      <button type="submit" class="btn-terra" style="height: 40px; padding: 0 20px;" {% if not staged %}disabled style="opacity: 0.5; cursor: not-allowed;"{% endif %}>
+        Add to layout
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Card 2: Sheet Preview & Assignments -->
+<div class="neo-card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+    <h3 style="margin: 0; font-size: 1.3rem;">2 &middot; Sheet preview</h3>
     {% if blocks %}
     <form method="post" action="{{ url_for('custom_reset') }}" onsubmit="return confirm('Reset the whole custom layout?');" style="margin: 0;">
-      <button type="submit" class="btn-clear">Reset layout</button>
+      <button type="submit" class="btn-remove">Reset layout</button>
     </form>
     {% endif %}
   </div>
 
-  <div style="display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap;">
+  <div style="display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap;">
+    <!-- Sheet Map Left -->
     <div style="flex: 0 0 {{ map_w }}px;">
       <div class="map" style="width: {{ map_w }}px; height: {{ map_h }}px;">
         {% for b in blocks %}
         <div class="blk" style="top: {{ b.top }}%; left: {{ b.left }}%; width: {{ b.width }}%; height: {{ b.height }}%; background-image: url('{{ b.url }}'); background-size: {{ b.bg_w }}% {{ b.bg_h }}%;">
-          <span class="chip">{{ b.file }}<br>{{ unit_lower }} {{ b.start }}-{{ b.end }}</span>
+          <span class="chip">{{ unit_title }} {{ b.start }}-{{ b.end }}</span>
         </div>
         {% endfor %}
       </div>
-      <p class="muted" style="margin: 8px 0 0 0; font-size: 0.75rem;">Each block repeats the cover picture. Grey area is unassigned.</p>
+      <p class="muted" style="margin: 10px 0 0 0; font-size: 0.8rem;">Preview shows layout placement. Grey area is unassigned.</p>
     </div>
 
-    <div style="flex: 1; min-width: 260px;">
-      <h4 style="margin: 0 0 10px 0;">Assignments</h4>
+    <!-- Assignments & Generate Right -->
+    <div style="flex: 1; min-width: 280px;">
+      <h4 style="margin: 0 0 12px 0; font-size: 1.1rem; font-family: 'Lora', Georgia, serif;">Assignments</h4>
+      
       {% for b in blocks %}
       <div class="asg">
         <img class="asg-img" src="{{ url_for('thumbnail', folder=b.folder, filename=b.file) }}" alt="{{ b.file }}">
@@ -121,26 +305,32 @@
           <span class="muted">{{ unit_title }} {{ b.start }}-{{ b.end }} &middot; {{ b.copies }} copies</span>
         </div>
         <form method="post" action="{{ url_for('custom_remove', index=b.index) }}" style="margin: 0;">
-          <button type="submit" class="btn-delete">Remove</button>
+          <button type="submit" class="btn-remove">Remove</button>
         </form>
       </div>
       {% else %}
-      <p class="muted" style="font-style: italic;">Nothing placed yet.</p>
+      <p class="muted" style="font-style: italic; margin-bottom: 20px;">Nothing placed yet.</p>
       {% endfor %}
 
-      <form method="post" action="{{ url_for('custom_generate') }}" style="margin-top: 18px;">
-        <h4 style="margin: 0 0 8px 0;">Unassigned cells</h4>
-        <label style="display: flex; gap: 8px; margin: 0 0 8px 0; font-weight: 400;"><input type="radio" name="fill_empty" value="blank" checked>Leave blank</label>
-        <label style="display: flex; gap: 8px; margin: 0 0 18px 0; font-weight: 400;"><input type="radio" name="fill_empty" value="cycle">Fill by cycling through the staged books</label>
+      <form method="post" action="{{ url_for('custom_generate') }}" style="margin-top: 20px;">
+        <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 8px;">Unassigned cells</div>
+        <label style="display: flex; gap: 8px; margin: 0 0 6px 0; font-weight: 500; font-size: 0.9rem; cursor: pointer;">
+          <input type="radio" name="fill_empty" value="blank" checked> Leave blank
+        </label>
+        <label style="display: flex; gap: 8px; margin: 0 0 16px 0; font-weight: 500; font-size: 0.9rem; cursor: pointer;">
+          <input type="radio" name="fill_empty" value="cycle"> Cycle through staged books
+        </label>
 
-        <div class="flash success" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: 0.85rem;">
-          {{ assigned_cells }} of {{ total_cells }} cells assigned &middot; {{ total_cells - assigned_cells }} empty
+        <div class="sage-badge">
+          {{ assigned_cells }} of {{ total_cells }} cells assigned
         </div>
-        <button type="submit" class="btn-primary" style="margin: 0; width: 100%; height: 42px;" {% if not icc_ready or not blocks %}disabled{% endif %}>
+
+        <button type="submit" class="btn-terra" style="width: 100%; height: 46px;" {% if not icc_ready or not blocks %}disabled style="opacity: 0.5; cursor: not-allowed;"{% endif %}>
           Generate &amp; download custom PDF
         </button>
       </form>
     </div>
   </div>
 </div>
+
 {% endblock %}
