@@ -2,7 +2,7 @@
 {% block content %}
 <style>
   .hero {
-    margin-bottom: 40px;
+    margin-bottom: 28px;
   }
   .hero h1 {
     font-size: 3.2rem;
@@ -14,6 +14,56 @@
     color: var(--muted);
     max-width: 650px;
     margin: 0;
+  }
+
+  /* Batch Setup Card at Top */
+  .setup-card {
+    background: #fffdf9;
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 24px 28px;
+    margin-bottom: 36px;
+  }
+  .setup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .setup-title {
+    font-family: 'Lora', Georgia, serif;
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .setup-grid {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .setup-field {
+    flex: 1;
+    min-width: 140px;
+  }
+  .setup-field label {
+    display: block;
+    font-size: 0.88rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  .setup-input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    background: #ffffff;
+    box-sizing: border-box;
   }
 
   /* 3-column top grid */
@@ -103,9 +153,73 @@
   }
 </style>
 
+<!-- Hero Section -->
 <div class="hero">
   <h1>Tiny books, printed<br>beautifully.</h1>
-  <p>Combine your cover parts, resize them to the exact miniature size, and send one print-ready CMYK sheet to the press.</p>
+  <p>Combine your cover parts, resize them to the exact miniature size, and send one print-ready CMYK PDF sheet to the press.</p>
+</div>
+
+<!-- STEP 0: Batch Dimensions Setup Card -->
+<div class="setup-card">
+  <div class="setup-header">
+    <div>
+      <div class="setup-title">Let's begin &middot; Define your PDF and Books size</div>
+      <span class="muted" style="font-size: 0.88rem;">Set your target book dimensions and sheet size before adding covers. Click "Save Dimensions" to apply.</span>
+    </div>
+  </div>
+
+  <form method="post" action="{{ url_for('settings') }}">
+    <div class="setup-grid">
+      <div class="setup-field">
+        <label for="book_width_cm">Total Width (cm)</label>
+        <input type="number" step="0.01" min="0.5" id="book_width_cm" name="book_width_cm" class="setup-input" value="{{ s.book_width_cm }}" required>
+      </div>
+
+      <div class="setup-field">
+        <label for="book_height_cm">Height (cm)</label>
+        <input type="number" step="0.01" min="0.5" id="book_height_cm" name="book_height_cm" class="setup-input" value="{{ s.book_height_cm }}" required>
+      </div>
+
+      <div class="setup-field">
+        <label for="spine_width_cm">
+          Spine Width (cm)
+        </label>
+        <input type="number" step="0.01" min="0.0" id="spine_width_cm" name="spine_width_cm" class="setup-input" value="{{ s.spine_width_cm }}" required>
+      </div>
+
+      <div class="setup-field" style="min-width: 180px;">
+        <label for="pdf_preset">Printing PDF Size</label>
+        <select id="pdf_preset" name="pdf_preset" onchange="toggleCustomPdf(this.value)" class="setup-input" style="background: white; cursor: pointer;">
+          <option value="12x18" {% if s.pdf_preset == '12x18' %}selected{% endif %}>12 × 18 inches (Default)</option>
+          <option value="a4" {% if s.pdf_preset == 'a4' %}selected{% endif %}>A4 (8.27 × 11.69 in)</option>
+          <option value="a3" {% if s.pdf_preset == 'a3' %}selected{% endif %}>A3 (11.69 × 16.54 in)</option>
+          <option value="letter" {% if s.pdf_preset == 'letter' %}selected{% endif %}>US Letter (8.5 × 11 in)</option>
+          <option value="custom" {% if s.pdf_preset == 'custom' %}selected{% endif %}>Custom (in inches)</option>
+        </select>
+      </div>
+
+      <div>
+        <button type="submit" class="btn-terra" style="height: 44px; padding: 0 20px; white-space: nowrap;">Save Dimensions</button>
+      </div>
+    </div>
+
+    <!-- Clear note clarifying Spine -->
+    <div style="margin-top: 10px; font-size: 0.82rem; color: var(--muted);">
+      <span style="color: var(--terracotta); font-weight: 700;">* Note on Spine:</span> Spine width is <strong>only used when combining 3-part covers</strong>. Full covers are resized directly to <code>Total Width × Height</code> (square if width = height).
+    </div>
+
+    <!-- Hidden custom sheet inputs (revealed only if 'Custom' is chosen) -->
+    <div id="custom-pdf-fields" style="display: {% if s.pdf_preset == 'custom' %}flex{% else %}none{% endif %}; gap: 16px; margin-top: 14px; max-width: 400px;">
+      <div style="flex: 1;">
+        <label style="font-size: 0.85rem; font-weight: 700;">Custom Sheet Width (in)</label>
+        <input type="number" step="0.1" min="1" id="pdf_width_in" name="pdf_width_in" class="setup-input" value="{{ s.pdf_width_in }}">
+      </div>
+      <div style="flex: 1;">
+        <label style="font-size: 0.85rem; font-weight: 700;">Custom Sheet Height (in)</label>
+        <input type="number" step="0.1" min="1" id="pdf_height_in" name="pdf_height_in" class="setup-input" value="{{ s.pdf_height_in }}">
+      </div>
+    </div>
+  </form>
 </div>
 
 <!-- Steps 1, 2, 3 Grid -->
@@ -178,4 +292,9 @@
 </div>
 {% endif %}
 
+<script>
+  function toggleCustomPdf(val) {
+    document.getElementById('custom-pdf-fields').style.display = (val === 'custom') ? 'flex' : 'none';
+  }
+</script>
 {% endblock %}

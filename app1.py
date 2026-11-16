@@ -298,12 +298,14 @@ def index():
     }
     icc_ready = SRGB_PROFILE_PATH.exists() and CMYK_PROFILE_PATH.exists()
     recent_batches = get_recent_batches(limit=5)
+    s = load_settings()
     return render_template(
         "index.html",
         counts=counts,
         icc_ready=icc_ready,
         icc_folder=ICC_DIR,
         recent_batches=recent_batches,
+        s=s,
     )
 
 
@@ -921,7 +923,7 @@ def settings():
             flash("Settings saved successfully!", "success")
         except ValueError:
             flash("Invalid number entered. Please check your inputs.", "error")
-        return redirect(url_for("settings"))
+        return redirect(url_for("index"))
 
     return render_template("settings.html", s=s)
 
