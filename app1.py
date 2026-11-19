@@ -299,6 +299,7 @@ def index():
     icc_ready = SRGB_PROFILE_PATH.exists() and CMYK_PROFILE_PATH.exists()
     recent_batches = get_recent_batches(limit=5)
     s = load_settings()
+    staged_covers = list_staged_covers()
     return render_template(
         "index.html",
         counts=counts,
@@ -306,7 +307,107 @@ def index():
         icc_folder=ICC_DIR,
         recent_batches=recent_batches,
         s=s,
+        staged_covers=staged_covers,
+        total_queued=len(staged_covers),
     )
+
+# -------------------------------------------------------------- STUDIO ADD ----
+@app.route("/add_book", methods=["POST"])
+def add_book():
+    mode = request.form.get("mode", "full")
+    custom_name = request.form.get("book_name")
+    settings = load_settings()
+    bw = settings["book_width_cm"]
+    bh = settings["book_height_cm"]
+
+    if mode == "full":
+        files = [f for f in request.files.getlist("covers") if f and f.filename]
+        if not files:
+            flash("Please choose at least one full cover image.", "error")
+            return redirect(url_for("index"))
+
+        w_px = cm_to_px(bw, DPI_FULLCOVER)
+        h_px = cm_to_px(bh, DPI_FULLCOVER)
+        saved = 0
+        for f in files:
+            try:
+                img = Image.open(f.stream)
+                icc_profile = img.info.get("icc_profile")
+                if img.mode not in ("RGBA", "RGB"):
+                    img = img.convert("RGBA" if "A" in img.mode or img.mode == "P" else "RGB")
+                resized = img.resize((w_px, h_px), Image.Resampling.LANCZOS)
+                resized = resized.filter(
+                    ImageFilter.UnsharpMask(
+                        radius=SHARPEN_RADIUS,
+                        percent=SHARPEN_PERCENT,
+                        threshold=SHARPEN_THRESHOLD,
+                    )
+                )
+                orig_stem = Path(f.filename).stem
+                out_path = get_unique_filepath(FULLCOVER_OUT, orig_stem, ".png")
+                save_kwargs = {"dpi": (DPI_FULLCOVER, DPI_FULLCOVER), "compress_level": 0}
+                if icc_profile:
+                    save_kwargs["icc_profile"] = icc_profile
+                resized.save(out_path, **save_kwargs)
+                saved += 1
+            except Exception as e:
+                flash(f"Failed on {f.filename}: {e}", "error")
+        flash(f"Added {saved} full cover(s) to the print tray.", "success")
+
+    elif mode == "2part":
+        back = request.files.get("back_2part") or request.files.get("back")
+        front = request.files.get("front_2part") or request.files.get("front")
+        if not back or not front or back.filename == "" or front.filename == "":
+            flash("Please choose both a back and a front image.", "error")
+            return redirect(url_for("index"))
+
+        spine_w = min(settings.get("spine_width_cm", 0.2), bw * 0.8)
+        front_w_cm = (bw - spine_w) / 2.0
+        back_w_cm = bw - front_w_cm
+
+        h_px = cm_to_px(bh, DPI_COMBINE)
+        back_img, back_w, _ = load_part(back, back_w_cm, bh)
+        front_img, front_w, _ = load_part(front, front_w_cm, bh)
+
+        total_w = back_w + front_w
+        combined = Image.new("RGB", (total_w, h_px), "white")
+        combined.paste(back_img, (0, 0))
+        combined.paste(front_img, (back_w, 0))
+
+        base_name = derive_book_name(front.filename, custom_name)
+        out_path = get_unique_filepath(TWOPART_OUT, base_name, ".jpg")
+        combined.save(out_path, dpi=(DPI_COMBINE, DPI_COMBINE), quality=95)
+        flash(f"Added 2-part cover '{out_path.name}' to the print tray.", "success")
+
+    elif mode == "3part":
+        back = request.files.get("back_3part") or request.files.get("back")
+        front = request.files.get("front_3part") or request.files.get("front")
+        spine = request.files.get("spine_3part") or request.files.get("spine")
+        if not all([back, front, spine]) or "" in (back.filename, front.filename, spine.filename):
+            flash("Please choose a back, front, AND spine image.", "error")
+            return redirect(url_for("index"))
+
+        spine_w_cm = min(settings.get("spine_width_cm", 0.2), bw * 0.8)
+        front_w_cm = (bw - spine_w_cm) / 2.0
+        back_w_cm = front_w_cm
+
+        h_px = cm_to_px(bh, DPI_COMBINE)
+        back_img, back_w, _ = load_part(back, back_w_cm, bh)
+        spine_img, spine_w, _ = load_part(spine, spine_w_cm, bh)
+        front_img, front_w, _ = load_part(front, front_w_cm, bh)
+
+        total_w = back_w + spine_w + front_w
+        combined = Image.new("RGB", (total_w, h_px), "white")
+        combined.paste(back_img, (0, 0))
+        combined.paste(spine_img, (back_w, 0))
+        combined.paste(front_img, (back_w + spine_w, 0))
+
+        base_name = derive_book_name(front.filename, custom_name)
+        out_path = get_unique_filepath(THREEPART_OUT, base_name, ".jpg")
+        combined.save(out_path, dpi=(DPI_COMBINE, DPI_COMBINE), quality=95)
+        flash(f"Added 3-part cover '{out_path.name}' to the print tray.", "success")
+
+    return redirect(url_for("index"))    
 
 
 # ---------------------------------------------------------------- 2-PART ----
@@ -479,25 +580,25 @@ def pdf():
         build_pdf(all_image_paths, batch_pdf_path)
         shutil.copyfile(batch_pdf_path, FINAL_PDF_DIR / "cover_sheet_cmyk.pdf")
 
-        # 3. Move all processed covers into the batch folder preserving original/clean names
-        def move_preserving_name(src_folder: Path, filename: str):
+        # 3. Copy processed covers into the batch archive (keeping originals in your tray!)
+        def copy_preserving_name(src_folder: Path, filename: str):
             src = src_folder / filename
             stem = Path(filename).stem
             ext = Path(filename).suffix
             dest = get_unique_filepath(batch_images_dir, stem, ext)
-            shutil.move(str(src), str(dest))
+            shutil.copyfile(str(src), str(dest))
 
         for name in twopart_imgs:
-            move_preserving_name(TWOPART_OUT, name)
+            copy_preserving_name(TWOPART_OUT, name)
 
         for name in threepart_imgs:
-            move_preserving_name(THREEPART_OUT, name)
+            copy_preserving_name(THREEPART_OUT, name)
 
         for name in fullcover_imgs:
-            move_preserving_name(FULLCOVER_OUT, name)
+            copy_preserving_name(FULLCOVER_OUT, name)
 
         flash(
-            f"Batch completed! PDF & {len(all_image_paths)} cover images saved to {batch_dir}. Staging folders are now clean.",
+            f"PDF generated! Archived to {batch_dir.name}. Your covers remain in your tray ready for Custom Layout.",
             "success",
         )
 

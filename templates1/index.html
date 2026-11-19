@@ -1,300 +1,302 @@
 {% extends "layout.html" %}
 {% block content %}
 <style>
-  .hero {
-    margin-bottom: 28px;
-  }
-  .hero h1 {
-    font-size: 3.2rem;
-    line-height: 1.1;
-    margin: 0 0 16px 0;
-  }
-  .hero p {
-    font-size: 1.15rem;
-    color: var(--muted);
-    max-width: 650px;
-    margin: 0;
-  }
-
-  /* Batch Setup Card at Top */
-  .setup-card {
-    background: #fffdf9;
-    border: 2px solid var(--border);
-    border-radius: 16px;
-    box-shadow: var(--shadow);
-    padding: 24px 28px;
-    margin-bottom: 36px;
-  }
-  .setup-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-  }
-  .setup-title {
-    font-family: 'Lora', Georgia, serif;
-    font-size: 1.35rem;
-    font-weight: 700;
-    margin: 0;
-  }
-
-  .setup-grid {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-    align-items: flex-end;
-  }
-  .setup-field {
-    flex: 1;
-    min-width: 140px;
-  }
-  .setup-field label {
-    display: block;
-    font-size: 0.88rem;
-    font-weight: 700;
-    margin-bottom: 6px;
-    color: var(--text);
-  }
-  .setup-input {
-    width: 100%;
-    padding: 9px 12px;
+  .format-btn {
     border: 2px solid var(--border);
     border-radius: 8px;
-    font-size: 0.95rem;
-    font-family: inherit;
     background: #ffffff;
-    box-sizing: border-box;
-  }
-
-  /* 3-column top grid */
-  .grid-top {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-    margin-bottom: 24px;
-  }
-  .step-card {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    min-height: 190px;
-  }
-  .step-num {
-    font-family: 'Lora', Georgia, serif;
-    font-size: 2.8rem;
     font-weight: 700;
-    color: var(--terracotta);
-    line-height: 1;
-    margin-bottom: 12px;
+    cursor: pointer;
+    padding: 10px;
+    font-size: 0.85rem;
+    transition: all 0.15s;
+    font-family: inherit;
   }
-  .step-title {
-    font-size: 1.25rem;
-    margin: 0 0 4px 0;
-  }
-  .card-link {
-    display: inline-block;
-    margin-top: 18px;
-    text-decoration: none;
-    color: var(--text);
-    font-weight: 700;
-    font-size: 0.95rem;
-    transition: transform 0.15s;
-  }
-  .step-card:hover .card-link {
-    color: var(--terracotta);
-    transform: translateX(4px);
-  }
-
-  /* 2-column bottom grid */
-  .grid-bottom {
-    display: grid;
-    grid-template-columns: 1.4fr 1fr;
-    gap: 20px;
-    margin-bottom: 40px;
-  }
-
-  /* PDF Terracotta Banner Card */
-  .pdf-card {
+  .format-btn.active {
     background: var(--terracotta);
     color: #ffffff;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 28px;
-  }
-  .pdf-card h3 {
-    color: #ffffff;
-    font-size: 1.5rem;
-    margin: 0 0 6px 0;
-  }
-  .pdf-card p {
-    color: rgba(255, 255, 255, 0.9);
-    margin: 0;
-    font-size: 0.95rem;
+    box-shadow: 2px 2px 0px var(--border);
   }
 
-  /* Sage Green Custom Layout Card */
-  .custom-card {
-    background: var(--sage);
+  .dropzone {
+    border: 2px dashed #94a3b8;
+    border-radius: 10px;
+    background: #f8fafc;
+    transition: all 0.15s;
+    padding: 24px 16px;
+    text-align: center;
+  }
+  .dropzone:hover {
+    border-color: var(--terracotta);
+    background: #fffaf5;
+  }
+
+  /* Tray Grid */
+  .tray-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 12px;
+    max-height: 480px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .tray-card {
+    background: #ffffff;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 2px 2px 0px var(--border);
+    padding: 8px;
+    text-align: center;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 28px;
+    align-items: center;
   }
-  .custom-card h3 {
-    font-size: 1.4rem;
-    margin: 0 0 6px 0;
+  .tray-img {
+    width: 100%;
+    height: 75px;
+    object-fit: contain;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+  }
+  .tray-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    margin: 6px 0 2px 0;
+    color: var(--text);
+    word-break: break-all;
+  }
+  .tray-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid #cbd5e1;
+    background: #f1f5f9;
+    color: var(--muted);
   }
 
-  @media (max-width: 768px) {
-    .grid-top, .grid-bottom {
-      grid-template-columns: 1fr;
-    }
+  .btn-tray-remove {
+    background: transparent;
+    color: #991b1b;
+    border: none;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  .btn-tray-remove:hover {
+    text-decoration: underline;
   }
 </style>
 
-<!-- Hero Section -->
-<div class="hero">
-  <h1>Tiny books, printed<br>beautifully.</h1>
-  <p>Combine your cover parts, resize them to the exact miniature size, and send one print-ready CMYK PDF sheet to the press.</p>
+<!-- Top Bar: Dimensions Summary & Editor Toggle -->
+<div class="neo-card" style="padding: 14px 20px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: gap; gap: 12px;">
+  <div style="font-size: 0.95rem;">
+    Target Book: <strong style="color: var(--terracotta);">{{ s.book_width_cm }} &times; {{ s.book_height_cm }} cm</strong>
+    &nbsp;&bull;&nbsp; Spine: <strong>{{ s.spine_width_cm }} cm</strong>
+    &nbsp;&bull;&nbsp; Sheet: <strong>{{ s.pdf_preset }}</strong>
+  </div>
+  <button type="button" onclick="toggleDimensionsEditor()" class="btn-white" style="padding: 5px 14px; font-size: 0.85rem;">
+    ⚙️ Edit Dimensions
+  </button>
 </div>
 
-<!-- STEP 0: Batch Dimensions Setup Card -->
-<div class="setup-card">
-  <div class="setup-header">
-    <div>
-      <div class="setup-title">Let's begin &middot; Define your PDF and Books size</div>
-      <span class="muted" style="font-size: 0.88rem;">Set your target book dimensions and sheet size before adding covers. Click "Save Dimensions" to apply.</span>
-    </div>
-  </div>
-
+<!-- Collapsible Dimensions Editor Form -->
+<div id="dimensions-editor" class="neo-card" style="display: none; padding: 20px; margin-bottom: 24px; background: #fffcf8;">
+  <h4 style="margin: 0 0 12px 0; font-family: 'Lora', Georgia, serif;">Change Batch Dimensions</h4>
   <form method="post" action="{{ url_for('settings') }}">
-    <div class="setup-grid">
-      <div class="setup-field">
-        <label for="book_width_cm">Total Width (cm)</label>
-        <input type="number" step="0.01" min="0.5" id="book_width_cm" name="book_width_cm" class="setup-input" value="{{ s.book_width_cm }}" required>
+    <div style="display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end;">
+      <div style="flex: 1; min-width: 120px;">
+        <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 4px;">Total Width (cm)</label>
+        <input type="number" step="0.01" min="0.5" name="book_width_cm" value="{{ s.book_width_cm }}" required style="width: 100%; padding: 8px; border: 2px solid var(--border); border-radius: 8px;">
       </div>
-
-      <div class="setup-field">
-        <label for="book_height_cm">Height (cm)</label>
-        <input type="number" step="0.01" min="0.5" id="book_height_cm" name="book_height_cm" class="setup-input" value="{{ s.book_height_cm }}" required>
+      <div style="flex: 1; min-width: 120px;">
+        <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 4px;">Height (cm)</label>
+        <input type="number" step="0.01" min="0.5" name="book_height_cm" value="{{ s.book_height_cm }}" required style="width: 100%; padding: 8px; border: 2px solid var(--border); border-radius: 8px;">
       </div>
-
-      <div class="setup-field">
-        <label for="spine_width_cm">
-          Spine Width (cm)
-        </label>
-        <input type="number" step="0.01" min="0.0" id="spine_width_cm" name="spine_width_cm" class="setup-input" value="{{ s.spine_width_cm }}" required>
+      <div style="flex: 1; min-width: 120px;">
+        <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 4px;">Spine Width (cm)</label>
+        <input type="number" step="0.01" min="0.0" name="spine_width_cm" value="{{ s.spine_width_cm }}" required style="width: 100%; padding: 8px; border: 2px solid var(--border); border-radius: 8px;">
       </div>
-
-      <div class="setup-field" style="min-width: 180px;">
-        <label for="pdf_preset">Printing PDF Size</label>
-        <select id="pdf_preset" name="pdf_preset" onchange="toggleCustomPdf(this.value)" class="setup-input" style="background: white; cursor: pointer;">
+      <div style="flex: 1; min-width: 160px;">
+        <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 4px;">Sheet Size</label>
+        <select name="pdf_preset" style="width: 100%; padding: 8px; border: 2px solid var(--border); border-radius: 8px; background: white;">
           <option value="12x18" {% if s.pdf_preset == '12x18' %}selected{% endif %}>12 × 18 inches (Default)</option>
-          <option value="a4" {% if s.pdf_preset == 'a4' %}selected{% endif %}>A4 (8.27 × 11.69 in)</option>
-          <option value="a3" {% if s.pdf_preset == 'a3' %}selected{% endif %}>A3 (11.69 × 16.54 in)</option>
-          <option value="letter" {% if s.pdf_preset == 'letter' %}selected{% endif %}>US Letter (8.5 × 11 in)</option>
-          <option value="custom" {% if s.pdf_preset == 'custom' %}selected{% endif %}>Custom (in inches)</option>
+          <option value="a4" {% if s.pdf_preset == 'a4' %}selected{% endif %}>A4</option>
+          <option value="a3" {% if s.pdf_preset == 'a3' %}selected{% endif %}>A3</option>
+          <option value="letter" {% if s.pdf_preset == 'letter' %}selected{% endif %}>US Letter</option>
         </select>
       </div>
-
-      <div>
-        <button type="submit" class="btn-terra" style="height: 44px; padding: 0 20px; white-space: nowrap;">Save Dimensions</button>
-      </div>
-    </div>
-
-    <!-- Clear note clarifying Spine -->
-    <div style="margin-top: 10px; font-size: 0.82rem; color: var(--muted);">
-      <span style="color: var(--terracotta); font-weight: 700;">* Note on Spine:</span> Spine width is <strong>only used when combining 3-part covers</strong>. Full covers are resized directly to <code>Total Width × Height</code> (square if width = height).
-    </div>
-
-    <!-- Hidden custom sheet inputs (revealed only if 'Custom' is chosen) -->
-    <div id="custom-pdf-fields" style="display: {% if s.pdf_preset == 'custom' %}flex{% else %}none{% endif %}; gap: 16px; margin-top: 14px; max-width: 400px;">
-      <div style="flex: 1;">
-        <label style="font-size: 0.85rem; font-weight: 700;">Custom Sheet Width (in)</label>
-        <input type="number" step="0.1" min="1" id="pdf_width_in" name="pdf_width_in" class="setup-input" value="{{ s.pdf_width_in }}">
-      </div>
-      <div style="flex: 1;">
-        <label style="font-size: 0.85rem; font-weight: 700;">Custom Sheet Height (in)</label>
-        <input type="number" step="0.1" min="1" id="pdf_height_in" name="pdf_height_in" class="setup-input" value="{{ s.pdf_height_in }}">
-      </div>
+      <input type="hidden" name="pdf_width_in" value="{{ s.pdf_width_in }}">
+      <input type="hidden" name="pdf_height_in" value="{{ s.pdf_height_in }}">
+      <button type="submit" class="btn-terra" style="height: 40px; padding: 0 16px;">Save</button>
     </div>
   </form>
 </div>
 
-<!-- Steps 1, 2, 3 Grid -->
-<div class="grid-top">
-  <div class="neo-card step-card">
-    <div>
-      <div class="step-num">1</div>
-      <h3 class="step-title">Two-part covers</h3>
-      <p class="muted" style="margin: 0;">Back + front &middot; {{ counts.twopart }} books</p>
+<!-- Main Split Workbench Studio -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start;">
+
+  <!-- LEFT: 1. The Book Builder Workbench -->
+  <div class="neo-card" style="padding: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h2 style="margin: 0; font-size: 1.5rem; font-family: 'Lora', Georgia, serif;">1. Add a Book</h2>
+      <span class="muted" style="font-size: 0.8rem;">Auto-sized to {{ s.book_width_cm }} &times; {{ s.book_height_cm }} cm</span>
     </div>
-    <a href="{{ url_for('twopart') }}" class="card-link">Open &rarr;</a>
+
+    <!-- Format Tabs -->
+    <div style="margin-bottom: 16px;">
+      <label style="display: block; font-size: 0.8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px;">What files do you have?</label>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+        <button type="button" id="tab-full" onclick="switchMode('full')" class="format-btn active">
+          🖼️ Full Cover
+        </button>
+        <button type="button" id="tab-2part" onclick="switchMode('2part')" class="format-btn">
+          🌗 2-Part
+        </button>
+        <button type="button" id="tab-3part" onclick="switchMode('3part')" class="format-btn">
+          📚 3-Part
+        </button>
+      </div>
+    </div>
+
+    <form method="post" action="{{ url_for('add_book') }}" enctype="multipart/form-data">
+      <input type="hidden" name="mode" id="mode-input" value="full">
+
+      <!-- Book Title -->
+      <div style="margin-bottom: 18px;">
+        <label for="book_name" style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 6px;">Book Title (optional)</label>
+        <input type="text" id="book_name" name="book_name" placeholder="e.g. Dune, Gatsby..." style="width: 100%; padding: 10px 14px; border: 2px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 0.95rem; box-sizing: border-box;">
+      </div>
+
+      <!-- MODE 1: Full Cover Dropzone -->
+      <div id="mode-full-fields" style="display: block; margin-bottom: 20px;">
+        <div class="dropzone">
+          <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 4px;">Choose Full Cover Graphic(s)</div>
+          <div class="muted" style="font-size: 0.8rem; margin-bottom: 12px;">Flat image with back + spine + front. Select one or several at once.</div>
+          <input type="file" name="covers" accept="image/*" multiple>
+        </div>
+      </div>
+
+      <!-- MODE 2: 2-Part Dropzones -->
+      <div id="mode-2part-fields" style="display: none; margin-bottom: 20px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="dropzone" style="padding: 16px 10px;">
+            <div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 4px;">Back Cover</div>
+            <div class="muted" style="font-size: 0.75rem; margin-bottom: 8px;">Wraps spine</div>
+            <input type="file" name="back_2part" accept="image/*" style="width: 100%; font-size: 0.8rem;">
+          </div>
+          <div class="dropzone" style="padding: 16px 10px;">
+            <div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 4px;">Front Cover</div>
+            <div class="muted" style="font-size: 0.75rem; margin-bottom: 8px;">Main face</div>
+            <input type="file" name="front_2part" accept="image/*" style="width: 100%; font-size: 0.8rem;">
+          </div>
+        </div>
+      </div>
+
+      <!-- MODE 3: 3-Part Dropzones -->
+      <div id="mode-3part-fields" style="display: none; margin-bottom: 20px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+          <div class="dropzone" style="padding: 14px 6px;">
+            <div style="font-weight: 700; font-size: 0.82rem; margin-bottom: 4px;">Back</div>
+            <input type="file" name="back_3part" accept="image/*" style="width: 100%; font-size: 0.75rem;">
+          </div>
+          <div class="dropzone" style="padding: 14px 6px; background: #fffaf0; border-color: #fcd34d;">
+            <div style="font-weight: 700; font-size: 0.82rem; margin-bottom: 2px;">Spine</div>
+            <div style="font-size: 0.72rem; color: var(--terracotta); font-weight: 700; margin-bottom: 4px;">{{ s.spine_width_cm }} cm</div>
+            <input type="file" name="spine" accept="image/*" style="width: 100%; font-size: 0.75rem;">
+          </div>
+          <div class="dropzone" style="padding: 14px 6px;">
+            <div style="font-weight: 700; font-size: 0.82rem; margin-bottom: 4px;">Front</div>
+            <input type="file" name="front_3part" accept="image/*" style="width: 100%; font-size: 0.75rem;">
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-terra" style="width: 100%; height: 46px; font-size: 0.95rem;">
+        + Add Book to Print Sheet
+      </button>
+    </form>
   </div>
 
-  <div class="neo-card step-card">
+  <!-- RIGHT: 2. The Print Sheet Tray -->
+  <div class="neo-card" style="padding: 24px; display: flex; flex-direction: column; justify-content: space-between; min-height: 520px;">
     <div>
-      <div class="step-num">2</div>
-      <h3 class="step-title">Three-part covers</h3>
-      <p class="muted" style="margin: 0;">Back + spine + front &middot; {{ counts.threepart }} books</p>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 2px solid var(--border); margin-bottom: 16px;">
+        <div>
+          <h2 style="margin: 0; font-size: 1.5rem; font-family: 'Lora', Georgia, serif;">2. Print Sheet Tray</h2>
+          <span class="muted" style="font-size: 0.85rem;">
+            <strong style="color: var(--terracotta);">{{ staged_covers|length }}</strong> covers queued for print
+          </span>
+        </div>
+        {% if staged_covers %}
+        <form method="post" action="{{ url_for('clear_all') }}" onsubmit="return confirm('Clear ALL {{ staged_covers|length }} covers?');" style="margin: 0;">
+          <button type="submit" class="btn-white" style="padding: 4px 10px; font-size: 0.8rem; color: #991b1b;">Clear Tray</button>
+        </form>
+        {% endif %}
+      </div>
+
+      <!-- Grid of queued books -->
+      {% if staged_covers %}
+      <div class="tray-grid">
+        {% for c in staged_covers %}
+        <div class="tray-card">
+          <img class="tray-img" src="{{ url_for('thumbnail', folder=c.folder, filename=c.file) }}" alt="{{ c.file }}" loading="lazy">
+          <div class="tray-title">{{ c.file }}</div>
+          <span class="tray-badge">{{ c.type_label }}</span>
+          <form method="post" action="{{ url_for('delete_file', folder=c.folder, filename=c.file) }}" style="margin: 0;">
+            <button type="submit" class="btn-tray-remove">Remove</button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="text-align: center; padding: 60px 20px; color: var(--muted);">
+        <div style="font-size: 2.5rem; margin-bottom: 8px;">📚</div>
+        <p style="margin: 0; font-weight: 600;">Your Print Tray is empty.</p>
+        <p style="margin: 4px 0 0 0; font-size: 0.85rem;">Select your files on the left and click "Add Book".</p>
+      </div>
+      {% endif %}
     </div>
-    <a href="{{ url_for('threepart') }}" class="card-link">Open &rarr;</a>
+
+    <!-- Print Action Footer -->
+    <div style="padding-top: 16px; border-top: 2px solid var(--border); margin-top: 20px;">
+      <form method="post" action="{{ url_for('pdf') }}" style="margin: 0;">
+        <button type="submit" class="btn-terra" style="width: 100%; height: 48px; font-size: 1rem;" {% if not staged_covers %}disabled style="opacity: 0.5; cursor: not-allowed;"{% endif %}>
+          📄 Generate &amp; Download Print PDF
+        </button>
+      </form>
+      <div class="muted" style="text-align: center; font-size: 0.8rem; margin-top: 8px;">
+        CMYK FOGRA39 &bull; Sheet auto-fill &bull; Batch archiving
+      </div>
+    </div>
   </div>
 
-  <div class="neo-card step-card">
-    <div>
-      <div class="step-num">3</div>
-      <h3 class="step-title">Full covers</h3>
-      <p class="muted" style="margin: 0;">Resize only &middot; {{ counts.fullcover }} books</p>
-    </div>
-    <a href="{{ url_for('fullcover') }}" class="card-link">Open &rarr;</a>
-  </div>
 </div>
-
-<!-- Steps 4 & 5 Grid -->
-<div class="grid-bottom">
-  <!-- 4. Generate PDF Card -->
-  <div class="neo-card pdf-card">
-    <div>
-      <h3>4 &middot; Generate the print PDF</h3>
-      <p>
-        {{ total_queued }} covers ready &middot;
-        {% if icc_ready %}ICC profiles found{% else %}⚠ Missing ICC profiles{% endif %}
-      </p>
-    </div>
-    <a href="{{ url_for('pdf') }}" class="btn-white">Generate PDF</a>
-  </div>
-
-  <!-- 5. Custom Layout Card -->
-  <div class="neo-card custom-card">
-    <div>
-      <h3>5 &middot; Custom layout</h3>
-      <p class="muted" style="margin: 0; color: var(--sage-dark);">Pick which book fills which rows.</p>
-    </div>
-    <a href="{{ url_for('custom') }}" class="card-link" style="color: var(--sage-dark);">Open &rarr;</a>
-  </div>
-</div>
-
-<!-- Recent Batches Section (if any exist) -->
-{% if recent_batches %}
-<div style="margin-top: 48px;">
-  <h3 style="font-size: 1.3rem; margin-bottom: 16px;">Recent Completed Batches</h3>
-  {% for b in recent_batches %}
-  <div class="neo-card" style="padding: 14px 20px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-    <div>
-      <strong style="font-size: 0.95rem;">{{ b.name }}</strong>
-      <span class="muted">&middot; {{ b.image_count }} cover image(s) + PDF</span>
-    </div>
-    <span class="muted" style="font-size: 0.8rem; font-family: monospace;">{{ b.path }}</span>
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
 
 <script>
-  function toggleCustomPdf(val) {
-    document.getElementById('custom-pdf-fields').style.display = (val === 'custom') ? 'flex' : 'none';
+  function switchMode(mode) {
+    document.getElementById('mode-input').value = mode;
+
+    ['full', '2part', '3part'].forEach(m => {
+      const btn = document.getElementById(`tab-${m}`);
+      const fields = document.getElementById(`mode-${m}-fields`);
+      if (m === mode) {
+        btn.classList.add('active');
+        fields.style.display = 'block';
+      } else {
+        btn.classList.remove('active');
+        fields.style.display = 'none';
+      }
+    });
+  }
+
+  function toggleDimensionsEditor() {
+    const editor = document.getElementById('dimensions-editor');
+    editor.style.display = (editor.style.display === 'none') ? 'block' : 'none';
   }
 </script>
+
 {% endblock %}

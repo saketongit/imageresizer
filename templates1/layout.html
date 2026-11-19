@@ -184,11 +184,7 @@
       <span>Cover Pipeline</span>
     </a>
     <nav>
-      <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Home</a>
-      <a href="{{ url_for('twopart') }}" class="{% if request.endpoint == 'twopart' %}active{% endif %}">2-Part</a>
-      <a href="{{ url_for('threepart') }}" class="{% if request.endpoint == 'threepart' %}active{% endif %}">3-Part</a>
-      <a href="{{ url_for('fullcover') }}" class="{% if request.endpoint == 'fullcover' %}active{% endif %}">Full Cover</a>
-      <a href="{{ url_for('pdf') }}" class="{% if request.endpoint == 'pdf' %}active{% endif %}">Final PDF</a>
+      <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Studio</a>
       <a href="{{ url_for('custom') }}" class="{% if request.endpoint == 'custom' %}active{% endif %}">Custom Layout</a>
     </nav>
   </div>
