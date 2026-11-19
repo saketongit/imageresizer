@@ -96,7 +96,7 @@
   <div style="font-size: 0.95rem;">
     Target Book: <strong style="color: var(--terracotta);">{{ s.book_width_cm }} &times; {{ s.book_height_cm }} cm</strong>
     &nbsp;&bull;&nbsp; Spine: <strong>{{ s.spine_width_cm }} cm</strong>
-    &nbsp;&bull;&nbsp; Sheet: <strong>{{ s.pdf_preset }}</strong>
+        &nbsp;&bull;&nbsp; Sheet: <strong>{% if s.pdf_preset == 'custom' %}{{ s.pdf_width_in }} &times; {{ s.pdf_height_in }} in{% else %}{{ s.pdf_preset }}{% endif %}</strong>
   </div>
   <button type="button" onclick="toggleDimensionsEditor()" class="btn-white" style="padding: 5px 14px; font-size: 0.85rem;">
     ⚙️ Edit Dimensions
@@ -122,16 +122,28 @@
       </div>
       <div style="flex: 1; min-width: 160px;">
         <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 4px;">Sheet Size</label>
-        <select name="pdf_preset" style="width: 100%; padding: 8px; border: 2px solid var(--border); border-radius: 8px; background: white;">
+        <select name="pdf_preset" onchange="toggleCustomSheet(this.value)" style="width: 100%; padding: 8px; border: 2px solid var(--border); border-radius: 8px; background: white; cursor: pointer;">
           <option value="12x18" {% if s.pdf_preset == '12x18' %}selected{% endif %}>12 × 18 inches (Default)</option>
-          <option value="a4" {% if s.pdf_preset == 'a4' %}selected{% endif %}>A4</option>
-          <option value="a3" {% if s.pdf_preset == 'a3' %}selected{% endif %}>A3</option>
-          <option value="letter" {% if s.pdf_preset == 'letter' %}selected{% endif %}>US Letter</option>
+          <option value="a4" {% if s.pdf_preset == 'a4' %}selected{% endif %}>A4 (8.27 × 11.69 in)</option>
+          <option value="a3" {% if s.pdf_preset == 'a3' %}selected{% endif %}>A3 (11.69 × 16.54 in)</option>
+          <option value="letter" {% if s.pdf_preset == 'letter' %}selected{% endif %}>US Letter (8.5 × 11 in)</option>
+          <option value="custom" {% if s.pdf_preset == 'custom' %}selected{% endif %}>Custom Size (in inches)</option>
         </select>
       </div>
-      <input type="hidden" name="pdf_width_in" value="{{ s.pdf_width_in }}">
-      <input type="hidden" name="pdf_height_in" value="{{ s.pdf_height_in }}">
+
       <button type="submit" class="btn-terra" style="height: 40px; padding: 0 16px;">Save</button>
+    </div>
+
+    <!-- Custom Sheet Width & Height (Revealed when Custom is chosen) -->
+    <div id="custom-sheet-fields" style="display: {% if s.pdf_preset == 'custom' %}flex{% else %}none{% endif %}; gap: 14px; margin-top: 12px; max-width: 360px;">
+      <div style="flex: 1;">
+        <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 4px;">Sheet Width (in)</label>
+        <input type="number" step="0.1" min="1" name="pdf_width_in" value="{{ s.pdf_width_in }}" style="width: 100%; padding: 8px; border: 2px solid var(--border); border-radius: 8px; box-sizing: border-box;">
+      </div>
+      <div style="flex: 1;">
+        <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 4px;">Sheet Height (in)</label>
+        <input type="number" step="0.1" min="1" name="pdf_height_in" value="{{ s.pdf_height_in }}" style="width: 100%; padding: 8px; border: 2px solid var(--border); border-radius: 8px; box-sizing: border-box;">
+      </div>
     </div>
   </form>
 </div>
@@ -296,6 +308,13 @@
   function toggleDimensionsEditor() {
     const editor = document.getElementById('dimensions-editor');
     editor.style.display = (editor.style.display === 'none') ? 'block' : 'none';
+  }
+
+  function toggleCustomSheet(val) {
+    const fields = document.getElementById('custom-sheet-fields');
+    if (fields) {
+      fields.style.display = (val === 'custom') ? 'flex' : 'none';
+    }
   }
 </script>
 
